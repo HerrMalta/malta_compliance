@@ -11,6 +11,7 @@ ACCOUNTS = {
 	"input_reverse": "1320",
 	"output": "2210",
 	"output_reverse": "2220",
+	"private_vat": "3230",
 }
 
 REVERSE_CHARGE_18 = (("input_reverse", 18, "Add"), ("output_reverse", 18, "Deduct"))
@@ -30,6 +31,8 @@ CATEGORIES = (
 	("VAT Box 3/6 9a/13a EU services reverse charge", "Purchase", ("3", "9a"), ("6", "13a"), REVERSE_CHARGE_18),
 	("VAT Box 3/6 10/14 EU capital goods reverse charge", "Purchase", ("3", "10"), ("6", "14"), REVERSE_CHARGE_18),
 	("VAT Box 4/7 11/15 Non-EU services reverse charge", "Purchase", ("4", "11"), ("7", "15"), REVERSE_CHARGE_18),
+	# Goods for private use bought from another EU state under the VAT number: VAT payable, no deduction (box 17).
+	("VAT Box 3/6 EU goods for private use not deductible", "Purchase", ("3",), ("6",), (("private_vat", 18, "Add"), ("output_reverse", 18, "Deduct"))),
 	("VAT Box 27/34 Malta goods for resale 18%", "Purchase", ("27",), ("34",), (("input", 18, "Add"),)),
 	("VAT Box 28/35 Malta goods for resale 5%", "Purchase", ("28",), ("35",), (("input", 5, "Add"),)),
 	("VAT Box 29 Malta exempt purchases for resale", "Purchase", ("29",), (), ()),

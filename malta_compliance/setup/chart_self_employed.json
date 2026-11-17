@@ -61,6 +61,8 @@
 			"Owner Capital": {"account_number": "3100", "account_type": "Equity"},
 			"Drawings": {"account_number": "3200", "account_type": "Equity"},
 			"Income Tax Payments": {"account_number": "3210", "account_type": "Equity"},
+			"Social Security Contributions": {"account_number": "3220", "account_type": "Equity"},
+			"VAT on Private EU Acquisitions": {"account_number": "3230", "account_type": "Tax"},
 			"Retained Profit": {"account_number": "3300", "account_type": "Equity"}
 		}
 	},
