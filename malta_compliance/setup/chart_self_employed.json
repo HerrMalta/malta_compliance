@@ -1,0 +1,113 @@
+{
+	"Assets": {
+		"root_type": "Asset",
+		"Current Assets": {
+			"account_number": "1000",
+			"Bank Accounts": {"account_number": "1100", "account_type": "Bank", "is_group": 1},
+			"Cash": {"account_number": "1150", "account_type": "Cash"},
+			"Receivables": {
+				"account_number": "1200",
+				"Debtors": {"account_number": "1210", "account_type": "Receivable"}
+			},
+			"VAT Receivable": {
+				"account_number": "1300",
+				"Input VAT Malta": {"account_number": "1310", "account_type": "Tax"},
+				"Input VAT Reverse Charge": {"account_number": "1320", "account_type": "Tax"}
+			},
+			"Prepayments and Other Receivables": {
+				"account_number": "1400",
+				"Prepayments": {"account_number": "1410"},
+				"Other Receivables": {"account_number": "1420"}
+			}
+		},
+		"Fixed Assets": {
+			"account_number": "1500",
+			"Computer Equipment": {"account_number": "1510", "account_type": "Fixed Asset"},
+			"Office Furniture and Equipment": {"account_number": "1520", "account_type": "Fixed Asset"},
+			"Motor Vehicles": {"account_number": "1530", "account_type": "Fixed Asset"},
+			"Accumulated Capital Allowances": {"account_number": "1590", "account_type": "Accumulated Depreciation"}
+		}
+	},
+	"Liabilities": {
+		"root_type": "Liability",
+		"Current Liabilities": {
+			"account_number": "2000",
+			"Payables": {
+				"account_number": "2100",
+				"Creditors": {"account_number": "2110", "account_type": "Payable"}
+			},
+			"VAT Payable": {
+				"account_number": "2200",
+				"Output VAT Malta": {"account_number": "2210", "account_type": "Tax"},
+				"Output VAT Reverse Charge": {"account_number": "2220", "account_type": "Tax"},
+				"VAT Settlement": {"account_number": "2290"}
+			},
+			"Accruals and Other Payables": {
+				"account_number": "2300",
+				"Asset Received But Not Billed": {"account_number": "2310", "account_type": "Asset Received But Not Billed"},
+				"Accruals": {"account_number": "2320"},
+				"Other Payables": {"account_number": "2330"}
+			},
+			"Temporary Accounts": {
+				"account_number": "2900",
+				"Temporary Opening": {"account_number": "2910", "account_type": "Temporary"}
+			}
+		}
+	},
+	"Equity": {
+		"root_type": "Equity",
+		"Owner Equity": {
+			"account_number": "3000",
+			"Owner Capital": {"account_number": "3100", "account_type": "Equity"},
+			"Drawings": {"account_number": "3200", "account_type": "Equity"},
+			"Income Tax Payments": {"account_number": "3210", "account_type": "Equity"},
+			"Retained Profit": {"account_number": "3300", "account_type": "Equity"}
+		}
+	},
+	"Income": {
+		"root_type": "Income",
+		"Revenue": {
+			"account_number": "4000",
+			"Services EU Business Customers": {"account_number": "4100", "account_type": "Income Account"},
+			"Services Outside Malta": {"account_number": "4200", "account_type": "Income Account"},
+			"Services Malta": {"account_number": "4300", "account_type": "Income Account"}
+		},
+		"Other Income": {
+			"account_number": "4900",
+			"Sundry Income": {"account_number": "4910", "account_type": "Income Account"},
+			"Interest Income": {"account_number": "4920", "account_type": "Income Account"}
+		}
+	},
+	"Expenses": {
+		"root_type": "Expense",
+		"Operating Expenses": {
+			"account_number": "5000",
+			"Software Licences and Subscriptions": {"account_number": "5100", "account_type": "Expense Account"},
+			"Hosting Domains and Cloud Services": {"account_number": "5110", "account_type": "Expense Account"},
+			"Small Equipment": {"account_number": "5120", "account_type": "Expense Account"},
+			"Telephone and Internet": {"account_number": "5200", "account_type": "Expense Account"},
+			"Office Rent and Home Office": {"account_number": "5300", "account_type": "Expense Account"},
+			"Office Supplies and Postage": {"account_number": "5310", "account_type": "Expense Account"},
+			"Travel": {"account_number": "5400", "account_type": "Expense Account"},
+			"Subsistence": {"account_number": "5410", "account_type": "Expense Account"},
+			"Motor Vehicle and Local Transport": {"account_number": "5420", "account_type": "Expense Account"},
+			"Accountancy and Professional Fees": {"account_number": "5500", "account_type": "Expense Account"},
+			"Legal and Registration Fees": {"account_number": "5510", "account_type": "Expense Account"},
+			"Bank Charges": {"account_number": "5600", "account_type": "Expense Account"},
+			"Exchange Gains and Losses": {"account_number": "5610", "account_type": "Expense Account"},
+			"Insurance": {"account_number": "5700", "account_type": "Expense Account"},
+			"Training Books and Conferences": {"account_number": "5800", "account_type": "Expense Account"},
+			"Advertising and Marketing": {"account_number": "5900", "account_type": "Expense Account"},
+			"Social Security Contributions": {"account_number": "5950", "account_type": "Expense Account"},
+			"Non-recoverable VAT": {"account_number": "5960", "account_type": "Expense Account"},
+			"Write Off": {"account_number": "5980", "account_type": "Expense Account"},
+			"Other Expenses": {"account_number": "5990", "account_type": "Expense Account"},
+			"Round Off": {"account_number": "5995", "account_type": "Round Off"}
+		},
+		"Capital Allowances": {
+			"account_number": "6000",
+			"Capital Allowances Wear and Tear": {"account_number": "6100", "account_type": "Depreciation"},
+			"Gain or Loss on Disposal of Fixed Assets": {"account_number": "6200", "account_type": "Expense Account"}
+		}
+	}
+}
