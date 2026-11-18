@@ -1,7 +1,9 @@
-"""Compares the consolidated Maltese texts behind the capital allowance rules (malta_compliance/assets/rules.py) with
-the versions recorded in malta_compliance/assets/law_versions.json: the version date in the ELI path of
-legislation.mt and the SHA-256 of the consolidated PDF. The version path alone does not suffice; S.L. 123.01 keeps
-the version 2010-07-22 although it holds an amendment of 2018. Standard library only, no Frappe.
+"""Compares the consolidated Maltese texts behind the rule registers (malta_compliance/assets/rules.py for capital
+allowances, malta_compliance/tax/rules.py for income tax, provisional tax and Class 2 contributions) with the
+versions recorded in malta_compliance/assets/law_versions.json: the version date in the ELI path of legislation.mt
+and the SHA-256 of the consolidated PDF. The version path alone does not suffice; S.L. 123.01 keeps the version
+2010-07-22 although it holds an amendment of 2018. The Class 2 tables of MTCA and the Budget speeches are not
+covered; mtca.gov.mt refuses automated requests. Standard library only, no Frappe.
 
     python tools/law_check.py            exit code 1 and a Markdown summary on stdout when a text changed, 2 on error
     python tools/law_check.py --update   writes the current versions into law_versions.json
@@ -25,6 +27,11 @@ TEXTS = {
 	"eli/sl/123.7": "Income Tax (Deductions) Rules, S.L. 123.07",
 	"eli/sl/123.173": "Industrial Buildings and Structures (Capital Allowances) Rules, S.L. 123.173",
 	"eli/sl/123.88": "Finance Leasing Rules, S.L. 123.88",
+	"eli/cap/372": "Income Tax Management Act, Cap. 372",
+	"eli/cap/318": "Social Security Act, Cap. 318",
+	"eli/sl/372.16": "Income Tax (Statutory Dates) Rules, S.L. 372.16",
+	"eli/sl/372.18": "Payment of Provisional Tax (P.T.) Rules, S.L. 372.18",
+	"eli/sl/372.28": "Income Tax (Rate of Interest) Rules, S.L. 372.28",
 }
 
 
@@ -50,7 +57,9 @@ def current(eli: str) -> dict:
 def main() -> int:
 	found = {eli: current(eli) for eli in TEXTS}
 	if "--update" in sys.argv:
-		VERSIONS.write_text(json.dumps(found, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+		VERSIONS.write_text(
+			json.dumps(found, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+		)
 		return 0
 	recorded = json.loads(VERSIONS.read_text(encoding="utf-8"))
 	changed = [eli for eli in TEXTS if recorded.get(eli) != found[eli]]
@@ -66,8 +75,8 @@ def main() -> int:
 			f"PDF {str(before.get('sha256'))[:12]} -> {after['sha256'][:12]}"
 		)
 	print(
-		"\nReview the change against docs/capital-allowances.md and malta_compliance/assets/rules.py, then record "
-		"the new versions with `python tools/law_check.py --update`."
+		"\nReview the change against docs/capital-allowances.md, docs/income-tax.md and the two rule registers, then "
+		"record the new versions with `python tools/law_check.py --update`."
 	)
 	return 1
 

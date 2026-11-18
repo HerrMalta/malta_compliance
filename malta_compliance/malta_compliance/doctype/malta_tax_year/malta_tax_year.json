@@ -1,0 +1,326 @@
+{
+ "actions": [],
+ "autoname": "format:{taxpayer} {basis_year}",
+ "creation": "2026-11-18 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "taxpayer",
+  "basis_year",
+  "year_of_assessment",
+  "column_break_status",
+  "status",
+  "children",
+  "child_tables",
+  "section_companies",
+  "companies",
+  "section_items",
+  "items",
+  "section_class2",
+  "self_born_before_1962",
+  "self_first_year",
+  "self_active_from",
+  "self_active_to",
+  "self_class2_base_entered",
+  "self_class2_base",
+  "column_break_class2",
+  "spouse_born_before_1962",
+  "spouse_first_year",
+  "spouse_active_from",
+  "spouse_active_to",
+  "spouse_class2_base_entered",
+  "spouse_class2_base",
+  "section_pt",
+  "pt_benchmark_entered",
+  "pt_benchmark",
+  "column_break_pt",
+  "pt_reduced",
+  "pt_reduced_total",
+  "section_payments",
+  "payments",
+  "section_filed",
+  "filed",
+  "filed_chargeable_income",
+  "column_break_filed",
+  "filed_tax"
+ ],
+ "fields": [
+  {
+   "description": "Name of the person or of the responsible spouse. The records of the other years are found by this name.",
+   "fieldname": "taxpayer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Taxpayer",
+   "reqd": 1
+  },
+  {
+   "description": "Calendar year of the income.",
+   "fieldname": "basis_year",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Basis Year",
+   "length": 4,
+   "reqd": 1
+  },
+  {
+   "fieldname": "year_of_assessment",
+   "fieldtype": "Data",
+   "label": "Year of Assessment",
+   "length": 4,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Single",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tax Status",
+   "options": "Single\nMarried\nSingle Parent",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Children of ITA art. 56(1): not over 18 years, or not over 23 years in full-time education.",
+   "fieldname": "children",
+   "fieldtype": "Select",
+   "label": "Qualifying Children",
+   "options": "0\n1\n2 or more"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.children!=\"0\"",
+   "description": "Condition of the rate tables for taxpayers with children, from basis year 2026.",
+   "fieldname": "child_tables",
+   "fieldtype": "Check",
+   "label": "EU/EEA National or Long-term Resident"
+  },
+  {
+   "fieldname": "section_companies",
+   "fieldtype": "Section Break",
+   "label": "Companies in the Books"
+  },
+  {
+   "fieldname": "companies",
+   "fieldtype": "Table",
+   "label": "Companies",
+   "options": "Malta Tax Year Company"
+  },
+  {
+   "fieldname": "section_items",
+   "fieldtype": "Section Break",
+   "label": "Amounts outside the Books"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Amounts",
+   "options": "Malta Tax Year Item"
+  },
+  {
+   "fieldname": "section_class2",
+   "fieldtype": "Section Break",
+   "label": "Class 2 Contributions"
+  },
+  {
+   "default": "0",
+   "fieldname": "self_born_before_1962",
+   "fieldtype": "Check",
+   "label": "Self: Born before 1962"
+  },
+  {
+   "default": "0",
+   "description": "The contributions of this year are due at the lowest rate SA.",
+   "fieldname": "self_first_year",
+   "fieldtype": "Check",
+   "label": "Self: First Calendar Year of the Self-occupation"
+  },
+  {
+   "description": "Only for a start during this year.",
+   "fieldname": "self_active_from",
+   "fieldtype": "Date",
+   "label": "Self: Self-occupied from"
+  },
+  {
+   "description": "Only for an end during this year.",
+   "fieldname": "self_active_to",
+   "fieldtype": "Date",
+   "label": "Self: Self-occupied until"
+  },
+  {
+   "default": "0",
+   "description": "Otherwise they are taken from the record of the preceding year.",
+   "fieldname": "self_class2_base_entered",
+   "fieldtype": "Check",
+   "label": "Self: Enter the Net Earnings of the Preceding Year"
+  },
+  {
+   "depends_on": "eval:doc.self_class2_base_entered",
+   "fieldname": "self_class2_base",
+   "fieldtype": "Currency",
+   "label": "Self: Net Earnings of the Preceding Year"
+  },
+  {
+   "fieldname": "column_break_class2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status==\"Married\"",
+   "fieldname": "spouse_born_before_1962",
+   "fieldtype": "Check",
+   "label": "Spouse: Born before 1962"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status==\"Married\"",
+   "description": "The contributions of this year are due at the lowest rate SA.",
+   "fieldname": "spouse_first_year",
+   "fieldtype": "Check",
+   "label": "Spouse: First Calendar Year of the Self-occupation"
+  },
+  {
+   "depends_on": "eval:doc.status==\"Married\"",
+   "description": "Only for a start during this year.",
+   "fieldname": "spouse_active_from",
+   "fieldtype": "Date",
+   "label": "Spouse: Self-occupied from"
+  },
+  {
+   "depends_on": "eval:doc.status==\"Married\"",
+   "description": "Only for an end during this year.",
+   "fieldname": "spouse_active_to",
+   "fieldtype": "Date",
+   "label": "Spouse: Self-occupied until"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status==\"Married\"",
+   "description": "Otherwise they are taken from the record of the preceding year.",
+   "fieldname": "spouse_class2_base_entered",
+   "fieldtype": "Check",
+   "label": "Spouse: Enter the Net Earnings of the Preceding Year"
+  },
+  {
+   "depends_on": "eval:doc.spouse_class2_base_entered",
+   "fieldname": "spouse_class2_base",
+   "fieldtype": "Currency",
+   "label": "Spouse: Net Earnings of the Preceding Year"
+  },
+  {
+   "fieldname": "section_pt",
+   "fieldtype": "Section Break",
+   "label": "Provisional Tax"
+  },
+  {
+   "default": "0",
+   "description": "Otherwise it is taken from the record of the basis year two years earlier.",
+   "fieldname": "pt_benchmark_entered",
+   "fieldtype": "Check",
+   "label": "Enter the Benchmark"
+  },
+  {
+   "depends_on": "eval:doc.pt_benchmark_entered",
+   "fieldname": "pt_benchmark",
+   "fieldtype": "Currency",
+   "label": "Benchmark"
+  },
+  {
+   "fieldname": "column_break_pt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "pt_reduced",
+   "fieldtype": "Check",
+   "label": "P.T. Reduction Form Filed"
+  },
+  {
+   "depends_on": "eval:doc.pt_reduced",
+   "fieldname": "pt_reduced_total",
+   "fieldtype": "Currency",
+   "label": "Estimated Tax of the Year"
+  },
+  {
+   "fieldname": "section_payments",
+   "fieldtype": "Section Break",
+   "label": "Payments"
+  },
+  {
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "options": "Malta Tax Year Payment"
+  },
+  {
+   "fieldname": "section_filed",
+   "fieldtype": "Section Break",
+   "label": "Return as Filed"
+  },
+  {
+   "default": "0",
+   "fieldname": "filed",
+   "fieldtype": "Check",
+   "label": "Return Filed"
+  },
+  {
+   "depends_on": "eval:doc.filed",
+   "fieldname": "filed_chargeable_income",
+   "fieldtype": "Currency",
+   "label": "Chargeable Income as Filed"
+  },
+  {
+   "fieldname": "column_break_filed",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.filed",
+   "description": "Return box 27. It is the base of the provisional tax two years later.",
+   "fieldname": "filed_tax",
+   "fieldtype": "Currency",
+   "label": "Tax Charged as Filed"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-18 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Malta Compliance",
+ "name": "Malta Tax Year",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "basis_year",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "taxpayer",
+ "track_changes": 1
+}

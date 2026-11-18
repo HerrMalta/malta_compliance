@@ -3,6 +3,14 @@
   "sha256": "9bd748c7dcf0921bee803642a21b54631cc022120c81cdebf21cf30fd2483aeb",
   "version": "20260310"
  },
+ "eli/cap/318": {
+  "sha256": "ad5b16966a3264f7b02afde05dbdfe5dfd779fb7bc269756e8b84c83667b51f8",
+  "version": "20260310"
+ },
+ "eli/cap/372": {
+  "sha256": "74d4b81529cae7193dea5c2a4feac7e2e27120bc83361ac39d499f0e39d43736",
+  "version": "20260310"
+ },
  "eli/sl/123.1": {
   "sha256": "4818a3fe9b9318b348622040060f82711feacf253198c6288eeba86766dd977a",
   "version": "20100722"
@@ -18,5 +26,17 @@
  "eli/sl/123.88": {
   "sha256": "ea6e7be0fe0449047e093210b95ff8164b45bf79b841087c648397a5c33c87f9",
   "version": "20100722"
+ },
+ "eli/sl/372.16": {
+  "sha256": "6bf90b780e8449b996b9ea392c4d4bdaba345fae47d1a73af161b8ca1eb0e73f",
+  "version": "20100722"
+ },
+ "eli/sl/372.18": {
+  "sha256": "f72708f4221df5be6472152e843d83fcc36546a5d689656e2eb312616cdff7a6",
+  "version": "20220304"
+ },
+ "eli/sl/372.28": {
+  "sha256": "978d4b42b92a8cdbf38699e49bd91f22f1f44404b9498611a20162a3ef1086b9",
+  "version": "20220601"
  }
 }

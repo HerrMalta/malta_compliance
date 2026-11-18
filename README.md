@@ -30,13 +30,35 @@ ERPNext's asset module computes the Maltese tax depreciation for assets of the c
 - **Report** "Capital Allowances Malta": allowances, deductible amounts and tax written-down values per asset and fiscal year, the balancing statements of the year, and the check of part (b) of the one-year option.
 - **Not covered**: the replacement election of art. 24(3), finance leases and leased vehicles (lease payments are expenses), assets first used before 2001 and aircraft acquired before 2018. Value adjustments, capitalised repairs, longer asset lives, asset capitalization and splits are rejected for these categories; an improvement is a separate asset.
 
-The rules are held with their periods of validity in `malta_compliance/assets/rules.py`. Values tied to acquisition or first use are frozen on the asset when it is submitted, so a later change of the law leaves existing assets unchanged. `REVIEWED_UP_TO` names the last year of assessment checked against the law; later years produce a warning. `tools/law_check.py` compares the consolidated texts on legislation.mt with `malta_compliance/assets/law_versions.json`; the workflow `.github/workflows/law-check.yml` runs it monthly and opens an issue on a change.
+The rules are held with their periods of validity in `malta_compliance/assets/rules.py`. Values tied to acquisition or first use are frozen on the asset when it is submitted, so a later change of the law leaves existing assets unchanged. `REVIEWED_UP_TO` names the last year of assessment checked against the law; later years produce a warning.
+
+### Income tax, provisional tax and Class 2 contributions
+
+The record "Malta Tax Year" holds the return data of one taxpayer, or of a married couple, for one basis year. Three reports compute from it. The legal basis, with citations and the points no source settles, is in [docs/income-tax.md](docs/income-tax.md). The scope is a resident self-employed individual, single or married, with trade income taxed at the rates of ITA art. 56(1).
+
+- **Record**: tax status (single, married, single parent), qualifying children, the companies whose profit enters the return with the spouse carrying on each trade, amounts outside the books (trade profit, employment or pension income, other income, deductions, tax credits, tax at source), payments, and the figures of the return as filed. The records of the other years of the same taxpayer are found by the field "Taxpayer".
+- **Profit**: income less expenses of each listed company in the calendar year. The taxpayer's own Class 2 contributions and tax payments belong on the equity accounts 3220 and 3210 and are not deducted; account 5950 is for contributions paid for employees.
+- **Payments**: "Get Payments from the Books" lists the payments booked on 3210 and 3220 of the listed companies from the basis year to the end of the following year. Each row is assigned a kind (provisional tax, settlement, Class 2 contribution); a row without a kind is not counted.
+- **Report "Income Tax Computation Malta"**: the computation in the order of the return of income, in whole euro: chargeable income, for a married couple the separate and the joint computation and the lower tax charged, the rebate for certain income brackets up to basis year 2024, tax credits, tax at source, provisional tax paid and the balance due on 30 June of the year of assessment.
+- **Report "Provisional Tax Malta"**: the benchmark from the record of the basis year two years earlier (the tax as filed, else as computed), the instalments of 20%, 30% and 50% due on 30 April, 31 August and 21 December, the limit of a P.T. Reduction Form, the payments applied in the order of the instalments, and the additional tax on late parts.
+- **Report "Social Security Contributions Malta"**: per self-occupied person the weekly Class 2 rate from the net profit of the preceding year (categories SA, SB and SC by year of birth), the Mondays of the three four-month periods, the payments, and the addition on late parts. The first calendar year of an activity is charged at the rate SA.
+- **Not covered**: the final tax on rental income, the tax on part-time work, pensions, non-residents, the minimum tax of non-domiciled individuals, the amounts of personal deductions and tax credits, Class 2 contributions of farmers and the pro-rata option, and a change of the tax status during a year.
+
+The rules are held in `malta_compliance/tax/rules.py` with their periods of validity, their source and its status: law, MTCA table without a Legal Notice, MTCA return guide, or announced in a Budget speech. The reports name the source of every table they use. The computations import no Frappe and are tested without a site.
+
+### Law check and tests
+
+`tools/law_check.py` compares the consolidated texts on legislation.mt behind both rule registers with `malta_compliance/assets/law_versions.json`; the workflow `.github/workflows/law-check.yml` runs it monthly and opens an issue on a change. The Class 2 tables of MTCA and the Budget speeches are reviewed by hand once a year.
 
 Tests, on a test site with ERPNext and the setup wizard completed:
 
 ```bash
 bench --site <test site> run-tests --module malta_compliance.tests.test_capital_allowances
+bench --site <test site> run-tests --module malta_compliance.tests.test_tax_rules
+bench --site <test site> run-tests --module malta_compliance.tests.test_tax_year
 ```
+
+`test_tax_rules` also runs without a site: `python -m unittest malta_compliance.tests.test_tax_rules`.
 
 ### Installation
 
