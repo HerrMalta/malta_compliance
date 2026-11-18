@@ -1,9 +1,9 @@
 """Capital allowances of a company for one fiscal year: one row per asset of a Maltese category with the allowance of
 the year, its deductible part after private use and the vehicle cap, the tax written-down value on the capped cost,
-and the balancing statement of a disposal (ITA art. 24). Totals per line of the MTCA profit and loss form: 22
-intellectual property, 23 industrial buildings, 24 wear and tear. Unabsorbed allowances (art. 14(1)(f) proviso (ii))
-and the part (b) of the one-year option above the qualifying income are computed outside the app; the report shows
-the check value for the latter.
+and the balancing statement of a disposal (ITA art. 24); for intellectual property the figures of the capital gain
+instead (ITA art. 5). Totals per line of the MTCA profit and loss form: 22 intellectual property, 23 industrial
+buildings, 24 wear and tear. Unabsorbed allowances (art. 14(1)(f) proviso (ii)) and the part (b) of the one-year
+option above the qualifying income are computed outside the app; the report shows the check value for the latter.
 """
 
 import frappe
@@ -120,6 +120,8 @@ def disposal_columns(asset) -> dict:
 	proceeds, value_after = disposal_values(asset)
 	if proceeds is None:
 		return {}
+	if allowance.asset_rule(asset) == INTELLECTUAL_PROPERTY:
+		return capital_gain_columns(asset, proceeds, value_after)
 	s = balancing.statement(asset, proceeds, value_after, asset.disposal_date)
 	return {
 		"capped_cost": s.capped_cost,
@@ -130,6 +132,27 @@ def disposal_columns(asset) -> dict:
 		"disposal_note": ""
 		if s.applies
 		else _("Not in the balancing statement (art. 5 or no allowance given)"),
+	}
+
+
+def capital_gain_columns(asset, proceeds: float, value_after: float) -> dict:
+	"""Transfer of intellectual property under ITA art. 5: the cost of acquisition excludes the deductions claimed under
+	art. 14(1)(m) (S.L. 123.27 rules 3 and 4(2)); a loss is set off only against capital gains (art. 5(10)(b))."""
+	total = allowance.cost(asset)
+	claimed = flt(total - flt(value_after), 2)
+	reduced_cost = flt(total - claimed, 2)
+	gain = flt(flt(proceeds) - reduced_cost, 2)
+	note = (
+		_("Capital gain, ITA art. 5")
+		if gain >= 0
+		else _("Capital loss, carried forward against capital gains (ITA art. 5(10)(b))")
+	)
+	return {
+		"proceeds": flt(proceeds),
+		"deductions_claimed": claimed,
+		"reduced_cost": reduced_cost,
+		"capital_gain": gain,
+		"disposal_note": note,
 	}
 
 
@@ -226,5 +249,8 @@ def columns() -> list[dict]:
 		col("proceeds", _("Proceeds")),
 		col("apportioned_proceeds", _("(iii) Proceeds Apportioned")),
 		col("balancing", _("Balancing Result")),
-		col("disposal_note", _("Note"), "Data", 220),
+		col("deductions_claimed", _("Deductions Claimed (IP)")),
+		col("reduced_cost", _("Cost less Deductions (IP)")),
+		col("capital_gain", _("Capital Gain or Loss (IP)")),
+		col("disposal_note", _("Note"), "Data", 260),
 	]

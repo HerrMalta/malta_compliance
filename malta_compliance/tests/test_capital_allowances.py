@@ -433,8 +433,19 @@ class TestBuildingsAndIP(unittest.TestCase):
 	def setUpClass(cls):
 		cls.company = make_company("MCB")
 
+	def test_building_condition_required(self):
+		with self.assertRaises(frappe.ValidationError):
+			make_asset(self.company, BUILDING, 100000, "2024-06-01", submit=False)
+
 	def test_building_with_initial_allowance(self):
-		asset = make_asset(self.company, BUILDING, 100000, "2024-06-01", submit=False)
+		asset = make_asset(
+			self.company,
+			BUILDING,
+			100000,
+			"2024-06-01",
+			submit=False,
+			mc_building_condition=capital_allowances.NEW_BUILDING,
+		)
 		amounts = [a for _d, a in rows(asset.name)]
 		self.assertEqual(len(amounts), 45)
 		self.assertEqual(amounts[0], 12000.0)
@@ -442,7 +453,12 @@ class TestBuildingsAndIP(unittest.TestCase):
 
 	def test_building_without_initial_allowance(self):
 		asset = make_asset(
-			self.company, BUILDING, 100000, "2024-06-01", submit=False, mc_no_initial_allowance=1
+			self.company,
+			BUILDING,
+			100000,
+			"2024-06-01",
+			submit=False,
+			mc_building_condition=capital_allowances.USED_BUILDING,
 		)
 		amounts = [a for _d, a in rows(asset.name)]
 		self.assertEqual(len(amounts), 50)
@@ -468,12 +484,24 @@ class TestBuildingsAndIP(unittest.TestCase):
 			make_asset(self.company, IP, 9000, "2022-04-01", submit=False, mc_ip_one_year=1)
 
 	def test_ip_sale_outside_profit(self):
+		"""The instalment of the year of sale is deducted; the result of the sale is the art. 5 gain."""
+		from malta_compliance.malta_compliance.report.capital_allowances_malta.capital_allowances_malta import (
+			execute,
+		)
+
 		asset = make_asset(self.company, IP, 9000, "2023-04-01")
 		book(asset.name, "2023-12-31")
 		si = sell(self.company, asset.name, "2024-05-01", 8000)
+		self.assertEqual(rows(asset.name), [("2023-12-31", 3000.0), ("2024-05-01", 3000.0)])
+		entries = depreciation_entries(asset.name)
+		self.assertEqual([balance(self.company, "6110", je) for je in entries], [3000.0, 3000.0])
 		self.assertEqual(balance(self.company, "6200", si.name), 0.0)
-		self.assertEqual(balance(self.company, "3240", si.name), -2000.0)
-		self.assertEqual(balance(self.company, "6110", depreciation_entries(asset.name)[0]), 3000.0)
+		self.assertEqual(balance(self.company, "3240", si.name), -5000.0)
+		_columns, data, _message, _chart, _summary = execute({"company": self.company, "fiscal_year": "2024"})
+		row = next(r for r in data if r["asset"] == asset.name)
+		self.assertEqual(row["deductions_claimed"], 6000.0)
+		self.assertEqual(row["reduced_cost"], 3000.0)
+		self.assertEqual(row["capital_gain"], 5000.0)
 
 
 class TestReport(unittest.TestCase):

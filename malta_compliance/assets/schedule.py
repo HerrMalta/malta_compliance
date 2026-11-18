@@ -5,7 +5,8 @@ selfcheck.py verifies after each migration that they still exist and produce the
 - `_check_is_pro_rata`: no pro-rata first period; the year of first use receives a full year (S.L. 123.01 rule 7(a)).
 - `get_depreciation_amount`: a fixed amount per year from first use, independent of booked months.
 - `set_depreciation_amount_for_disposal`: no row in the year of disposal (rule 7(b)), except a full row when the
-  disposal date is the schedule date of that year's row.
+  disposal date is the schedule date of that year's row. Intellectual property receives the full instalment of the
+  year of disposal, dated on the disposal: paragraph (m) holds no rule like rule 7(b).
 """
 
 from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
@@ -14,6 +15,7 @@ from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_sched
 from frappe.utils import cint, flt, getdate
 
 from malta_compliance.assets import allowance
+from malta_compliance.setup.capital_allowances import INTELLECTUAL_PROPERTY
 
 OVERRIDDEN_METHODS = ("_check_is_pro_rata", "get_depreciation_amount", "set_depreciation_amount_for_disposal")
 
@@ -38,13 +40,15 @@ class MaltaAssetDepreciationSchedule(AssetDepreciationSchedule):
 		)
 
 	def set_depreciation_amount_for_disposal(self, row_idx):
-		if not self._mc_rule():
+		rule = self._mc_rule()
+		if not rule:
 			return super().set_depreciation_amount_for_disposal(row_idx)
-		if getdate(self.schedule_date) != getdate(self.disposal_date):
+		if rule != INTELLECTUAL_PROPERTY and getdate(self.schedule_date) != getdate(self.disposal_date):
 			return
 		remaining = flt(self.pending_depreciation_amount) - flt(self.fb_row.expected_value_after_useful_life)
 		self.depreciation_amount = flt(
 			min(self.depreciation_amount, remaining), self.asset_doc.precision("net_purchase_amount")
 		)
 		if self.depreciation_amount > 0:
+			self.schedule_date = self.disposal_date
 			self.add_depr_schedule_row(row_idx)

@@ -16,6 +16,10 @@ ACCUMULATED_ACCOUNT = "1590"
 WEAR_AND_TEAR = "Wear and Tear"
 INDUSTRIAL_BUILDING = "Industrial Building"
 INTELLECTUAL_PROPERTY = "Intellectual Property"
+# Values of the asset field mc_building_condition; the initial deduction applies to new buildings only (IRD return
+# workbook and guide: "only calculated on assets indicated as new").
+NEW_BUILDING = "New building, not used before"
+USED_BUILDING = "Used building"
 
 # (category name, rule, Schedule item of S.L. 123.01 or 0, fixed asset account, expense account, vehicle cap).
 CATEGORIES = (
@@ -126,17 +130,18 @@ CUSTOM_FIELDS = {
 			"description": "Vehicle of a category with the cost cap that falls outside S.L. 123.07 rule 3(4): not commonly used as a private vehicle, hire or carriage of the public, driving instruction",
 		},
 		{
-			"fieldname": "mc_no_initial_allowance",
-			"label": "No Initial Allowance (Industrial Building)",
-			"fieldtype": "Check",
+			"fieldname": "mc_building_condition",
+			"label": "Building Condition (Industrial Building)",
+			"fieldtype": "Select",
+			"options": f"\n{NEW_BUILDING}\n{USED_BUILDING}",
 			"insert_after": "mc_cap_exempt",
-			"description": "Building not new or not first used in the year of the Available-for-use Date (ITA art. 14(1)(j))",
+			"description": "Required for industrial buildings and structures; the initial deduction of ITA art. 14(1)(j) applies to a new building only",
 		},
 		{
 			"fieldname": "mc_ip_one_year",
 			"label": "Deduct in One Year (Intellectual Property)",
 			"fieldtype": "Check",
-			"insert_after": "mc_no_initial_allowance",
+			"insert_after": "mc_building_condition",
 			"description": "ITA art. 14(1)(m) second proviso; the part above one third is deductible only against income produced by the asset",
 		},
 		{

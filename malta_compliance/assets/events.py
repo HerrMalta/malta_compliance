@@ -91,7 +91,13 @@ def asset_validate(doc, method=None):
 	if rule != WEAR_AND_TEAR:
 		doc.mc_cap_exempt = 0
 	if rule != INDUSTRIAL_BUILDING:
-		doc.mc_no_initial_allowance = 0
+		doc.mc_building_condition = None
+	elif not doc.get("mc_building_condition"):
+		frappe.throw(
+			_(
+				"Choose the Building Condition: a new building receives the initial deduction, a used one does not."
+			)
+		)
 	if rule != INTELLECTUAL_PROPERTY:
 		doc.mc_ip_one_year = 0
 	terms = allowance.resolve_terms(doc)

@@ -14,6 +14,7 @@ from malta_compliance.assets import rules
 from malta_compliance.setup.capital_allowances import (
 	INDUSTRIAL_BUILDING,
 	INTELLECTUAL_PROPERTY,
+	NEW_BUILDING,
 	WEAR_AND_TEAR,
 	building_years,
 )
@@ -63,7 +64,7 @@ def resolve_terms(asset) -> Terms:
 			annual = rules.select(rules.BUILDING_ANNUAL_RATE, first_use)
 			versions.append(annual.code)
 			initial_rate = 0.0
-			if not asset.get("mc_no_initial_allowance"):
+			if asset.get("mc_building_condition") == NEW_BUILDING:
 				initial = rules.select(rules.BUILDING_INITIAL_RATE, first_use)
 				versions.append(initial.code)
 				initial_rate = initial.value
