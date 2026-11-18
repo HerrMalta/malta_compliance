@@ -1,0 +1,22 @@
+{
+ "eli/cap/123": {
+  "sha256": "9bd748c7dcf0921bee803642a21b54631cc022120c81cdebf21cf30fd2483aeb",
+  "version": "20260310"
+ },
+ "eli/sl/123.1": {
+  "sha256": "4818a3fe9b9318b348622040060f82711feacf253198c6288eeba86766dd977a",
+  "version": "20100722"
+ },
+ "eli/sl/123.173": {
+  "sha256": "94177cda35dccd86e57672d65f19cf90c29ba5045c619a97bfe51b51ab018a73",
+  "version": "20161102"
+ },
+ "eli/sl/123.7": {
+  "sha256": "11b0d914f9f801fc7fe4216607d43b1cb15ca425805cc58493b0f992ac995b42",
+  "version": "20240913"
+ },
+ "eli/sl/123.88": {
+  "sha256": "ea6e7be0fe0449047e093210b95ff8164b45bf79b841087c648397a5c33c87f9",
+  "version": "20100722"
+ }
+}

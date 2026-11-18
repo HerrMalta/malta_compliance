@@ -1,7 +1,9 @@
 app_name = "malta_compliance"
 app_title = "Malta Compliance"
 app_publisher = "HerrMalta"
-app_description = "Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)"
+app_description = (
+	"Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)"
+)
 app_email = "247870707+HerrMalta@users.noreply.github.com"
 app_license = "mit"
 
@@ -279,3 +281,33 @@ required_apps = ["erpnext"]
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+
+# Capital allowances (docs/capital-allowances.md)
+# -----------------------------------------------
+
+after_install = "malta_compliance.setup.capital_allowances.after_install"
+after_migrate = ["malta_compliance.assets.selfcheck.run"]
+
+override_doctype_class = {
+	"Asset Depreciation Schedule": "malta_compliance.assets.schedule.MaltaAssetDepreciationSchedule",
+}
+
+doc_events = {
+	"Asset": {
+		"before_validate": "malta_compliance.assets.events.asset_before_validate",
+		"validate": "malta_compliance.assets.events.asset_validate",
+		"before_update_after_submit": "malta_compliance.assets.events.asset_before_update_after_submit",
+	},
+	"Journal Entry": {
+		"on_submit": "malta_compliance.assets.depreciation.on_journal_entry_submit",
+		"before_cancel": "malta_compliance.assets.depreciation.before_journal_entry_cancel",
+		"on_cancel": "malta_compliance.assets.depreciation.on_journal_entry_cancel",
+	},
+	"Sales Invoice": {
+		"on_submit": "malta_compliance.assets.balancing.on_sales_invoice_submit",
+		"on_cancel": "malta_compliance.assets.balancing.on_sales_invoice_cancel",
+	},
+	"Asset Value Adjustment": {"validate": "malta_compliance.assets.events.asset_value_adjustment_validate"},
+	"Asset Repair": {"validate": "malta_compliance.assets.events.asset_repair_validate"},
+	"Asset Capitalization": {"validate": "malta_compliance.assets.events.asset_capitalization_validate"},
+}

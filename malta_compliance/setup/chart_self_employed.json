@@ -25,6 +25,12 @@
 			"Computer Equipment": {"account_number": "1510", "account_type": "Fixed Asset"},
 			"Office Furniture and Equipment": {"account_number": "1520", "account_type": "Fixed Asset"},
 			"Motor Vehicles": {"account_number": "1530", "account_type": "Fixed Asset"},
+			"Computer Software": {"account_number": "1540", "account_type": "Fixed Asset"},
+			"Plant and Machinery": {"account_number": "1550", "account_type": "Fixed Asset"},
+			"Installations in Premises": {"account_number": "1560", "account_type": "Fixed Asset"},
+			"Intellectual Property": {"account_number": "1570", "account_type": "Fixed Asset"},
+			"Industrial Buildings and Structures": {"account_number": "1580", "account_type": "Fixed Asset"},
+			"Land": {"account_number": "1585", "account_type": "Fixed Asset"},
 			"Accumulated Capital Allowances": {"account_number": "1590", "account_type": "Accumulated Depreciation"}
 		}
 	},
@@ -63,6 +69,7 @@
 			"Income Tax Payments": {"account_number": "3210", "account_type": "Equity"},
 			"Social Security Contributions": {"account_number": "3220", "account_type": "Equity"},
 			"VAT on Private EU Acquisitions": {"account_number": "3230", "account_type": "Tax"},
+			"Non-deductible Capital Allowances": {"account_number": "3240", "account_type": "Equity"},
 			"Retained Profit": {"account_number": "3300", "account_type": "Equity"}
 		}
 	},
@@ -109,6 +116,8 @@
 		"Capital Allowances": {
 			"account_number": "6000",
 			"Capital Allowances Wear and Tear": {"account_number": "6100", "account_type": "Depreciation"},
+			"Capital Allowances Intellectual Property": {"account_number": "6110", "account_type": "Depreciation"},
+			"Capital Allowances Industrial Buildings": {"account_number": "6120", "account_type": "Depreciation"},
 			"Gain or Loss on Disposal of Fixed Assets": {"account_number": "6200", "account_type": "Expense Account"}
 		}
 	}

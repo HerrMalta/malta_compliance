@@ -1,7 +1,8 @@
 """Sets up an ERPNext company for a self-employed individual in Malta: chart of accounts from
 chart_self_employed.json, bank accounts, company address, fiscal years, default accounts, VAT setup by registration
-article (vat.py), a service item and the field for the original invoice number on Sales Invoice. Idempotent: an
-existing company keeps its accounts; missing parts are added. Personal data comes in as arguments only.
+article (vat.py), capital allowance categories (capital_allowances.py), a service item and the field for the original
+invoice number on Sales Invoice. Idempotent: an existing company keeps its accounts and receives the accounts of the
+chart it lacks; missing parts are added. Personal data comes in as arguments only.
 
 Run as Administrator, for example:
     bench --site <site> execute malta_compliance.setup.company.setup_company --kwargs "{...}"
@@ -14,9 +15,12 @@ import frappe
 from erpnext.accounts.doctype.account.chart_of_accounts.chart_of_accounts import create_charts
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from malta_compliance.setup import capital_allowances
 from malta_compliance.setup.vat import account, setup_vat
 
 CHART_FILE = os.path.join(os.path.dirname(__file__), "chart_self_employed.json")
+# Keys of a chart node that are account properties, not child accounts.
+CHART_PROPERTIES = {"account_number", "account_type", "is_group", "root_type", "account_currency", "tax_rate"}
 BANK_GROUP = "1100"
 SERVICE_ITEM = "Software Development"
 
@@ -75,15 +79,18 @@ def setup_company(
 	# Adding the column commits implicitly in MariaDB, so it runs before the company is created; everything after
 	# it is one transaction.
 	create_custom_fields(CUSTOM_FIELDS, update=True)
+	capital_allowances.ensure_custom_fields()
 	frappe.db.commit()
 	for year in fiscal_years or ():
 		ensure_fiscal_year(int(year))
 	company, created = ensure_company(company_name, abbr, tax_id, email, phone_no)
+	accounts_added = [] if created else ensure_chart_accounts(company.name)
 	bank_accounts = [ensure_bank(company.name, bank) for bank in banks or ()]
 	set_defaults(company.name, bank_accounts[0] if bank_accounts else None)
 	if address:
 		ensure_address(company.name, address)
 	templates = setup_vat(company.name, vat_article)
+	allowances = capital_allowances.setup_capital_allowances(company.name, create_fields=False)
 	ensure_service_item(company.name)
 	if default_company:
 		frappe.db.set_single_value("Global Defaults", "default_company", company.name)
@@ -95,6 +102,8 @@ def setup_company(
 		"accounts": frappe.db.count("Account", {"company": company.name}),
 		"bank_accounts": bank_accounts,
 		"templates_created": templates,
+		"accounts_added": accounts_added,
+		"capital_allowances": allowances,
 	}
 
 
@@ -143,13 +152,59 @@ def ensure_company(company_name, abbr, tax_id, email, phone_no):
 	return frappe.get_doc("Company", company.name), True
 
 
+def ensure_chart_accounts(company: str) -> list[str]:
+	"""Adds the accounts of chart_self_employed.json missing in an existing company below the group of the parent
+	node, found by account number (by name for the root accounts); returns the names of the accounts created."""
+	with open(CHART_FILE) as f:
+		chart = json.load(f)
+	created = []
+
+	def walk(nodes: dict, parent: str | None, root_type: str | None) -> None:
+		for name, node in nodes.items():
+			if name in CHART_PROPERTIES or not isinstance(node, dict):
+				continue
+			children = {k: v for k, v in node.items() if k not in CHART_PROPERTIES and isinstance(v, dict)}
+			is_group = 1 if children or node.get("is_group") else 0
+			number = node.get("account_number")
+			node_root_type = node.get("root_type", root_type)
+			filters = (
+				{"company": company, "account_number": number}
+				if number
+				else {"company": company, "account_name": name, "is_group": 1, "root_type": node_root_type}
+			)
+			existing = frappe.db.get_value("Account", filters)
+			if not existing:
+				if not parent:
+					frappe.throw(f"Root account {name} missing in company {company}")
+				existing = (
+					frappe.get_doc(
+						{
+							"doctype": "Account",
+							"company": company,
+							"account_name": name,
+							"account_number": number,
+							"parent_account": parent,
+							"is_group": is_group,
+							"account_type": node.get("account_type"),
+						}
+					)
+					.insert(ignore_permissions=True)
+					.name
+				)
+				created.append(existing)
+			walk(children, existing, node_root_type)
+
+	walk(chart, None, None)
+	return created
+
+
 def ensure_bank(company: str, bank: dict) -> str:
 	"""Creates the bank, its ledger account below the bank group and the company's Bank Account; returns the ledger
 	account."""
 	if not frappe.db.exists("Bank", bank["bank"]):
-		frappe.get_doc({"doctype": "Bank", "bank_name": bank["bank"], "swift_number": bank.get("swift_number")}).insert(
-			ignore_permissions=True
-		)
+		frappe.get_doc(
+			{"doctype": "Bank", "bank_name": bank["bank"], "swift_number": bank.get("swift_number")}
+		).insert(ignore_permissions=True)
 	ledger = frappe.db.get_value("Account", {"company": company, "account_number": bank["account_number"]})
 	if not ledger:
 		ledger = (
@@ -175,7 +230,9 @@ def ensure_bank(company: str, bank: dict) -> str:
 				"account": ledger,
 				"company": company,
 				"is_company_account": 1,
-				"is_default": int(not frappe.db.exists("Bank Account", {"company": company, "is_default": 1})),
+				"is_default": int(
+					not frappe.db.exists("Bank Account", {"company": company, "is_default": 1})
+				),
 				"iban": bank.get("iban"),
 			}
 		).insert(ignore_permissions=True)
@@ -188,7 +245,11 @@ def account_group(company: str, number: str) -> str:
 
 def set_defaults(company_name: str, bank_account: str | None) -> None:
 	company = frappe.get_doc("Company", company_name)
-	updates = {field: account(company.name, number) for field, number in DEFAULT_ACCOUNTS.items() if not company.get(field)}
+	updates = {
+		field: account(company.name, number)
+		for field, number in DEFAULT_ACCOUNTS.items()
+		if not company.get(field)
+	}
 	if bank_account and not company.default_bank_account:
 		updates["default_bank_account"] = bank_account
 	cost_center = frappe.db.get_value("Cost Center", {"company": company.name, "is_group": 0})

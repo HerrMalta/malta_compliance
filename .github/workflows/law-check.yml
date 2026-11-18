@@ -1,0 +1,41 @@
+# Monthly comparison of the Maltese legal texts behind the capital allowance rules with the recorded versions
+# (tools/law_check.py). A change opens an issue, unless an open issue with the same title exists; GitHub notifies the
+# repository owner. No secrets; the job reads legislation.mt only.
+name: Law check
+
+on:
+  schedule:
+    - cron: "17 6 3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  law-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compare legal texts
+        id: check
+        run: |
+          set +e
+          python3 tools/law_check.py > summary.md
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - name: Open issue
+        if: steps.check.outputs.status == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Maltese capital allowance law changed on legislation.mt"
+          open=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq 'length')
+          if [ "$open" = "0" ]; then
+            gh issue create --title "$title" --body-file summary.md
+          fi
+      - name: Fail on error
+        if: steps.check.outputs.status != '0' && steps.check.outputs.status != '1'
+        run: |
+          cat summary.md
+          exit 1
