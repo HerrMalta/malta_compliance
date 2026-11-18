@@ -23,12 +23,12 @@
    "reqd": 1
   },
   {
-   "description": "A row without a kind is not counted.",
+   "description": "A row without a kind, or with the kind Other, is not counted.",
    "fieldname": "kind",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Kind",
-   "options": "\nProvisional Tax\nSettlement\nClass 2 Contribution"
+   "options": "\nProvisional Tax\nProvisional Tax of the Preceding Year\nSettlement of the Preceding Year\nClass 2 Contribution\nClass 2 Contribution of the Preceding Year\nOther"
   },
   {
    "default": "Self",

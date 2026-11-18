@@ -86,5 +86,14 @@ def periods(year: int, rate, active_from: date | None = None, active_to: date | 
 
 
 def late_addition(unpaid, due: date, until: date) -> Decimal:
-	"""Addition on contributions unpaid from `due` until `until` (SSA art. 116(1))."""
-	return late.addition(unpaid, due, until, rules.CLASS2_LATE)
+	"""Addition on contributions unpaid from `due` until `until`: the further contribution of 1% for each month up
+	to the end of 2025, then interest at the rate for the date payable, limited to the contribution (SSA
+	art. 116(1))."""
+	amount = Decimal(str(unpaid))
+	months = late.months_of_delay(due, until)
+	further = [m for m in months if m <= rules.CLASS2_FURTHER_CONTRIBUTION.last]
+	total = amount * rules.CLASS2_FURTHER_CONTRIBUTION.percent / 100 * len(further)
+	if len(months) > len(further):
+		rate = rules.monthly_rate(rules.TAX_INTEREST, due).percent
+		total += min(amount, amount * rate / 100 * (len(months) - len(further)))
+	return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

@@ -1,6 +1,6 @@
 """Class 2 contributions of the contribution year of a Malta Tax Year record: per self-occupied person the weekly
-rate from the net earnings of the preceding year, the three periods with their weeks and due dates, the payments of
-the record applied in the order of the periods, and the addition on parts paid late or unpaid on the as-of date
+rate from the net earnings of the preceding year, the three periods with their weeks and due dates, the payments
+applied in the order of the periods, and the addition on parts paid late or unpaid on the as-of date
 (docs/income-tax.md).
 """
 
@@ -25,19 +25,27 @@ def execute(filters=None):
 	warning = rules.review_warning(tax_year.basis_year(doc))
 	if warning:
 		lines.append(warning)
-	for person in persons(doc):
-		rows, text = person_rows(doc, person, today)
-		data += rows
-		lines.append(f"{_(person)}: {text}")
+	try:
+		for person in persons(doc):
+			rows, text = person_rows(doc, person, today)
+			data += rows
+			lines.append(f"{_(person)}: {text}")
+	except rules.NotCovered as e:
+		frappe.throw(str(e), title=_("Year not covered by the rule register"))
+	missing = tax_year.without_kind(doc)
+	if missing:
+		lines.append(_("{0} payments of the record have no kind and are not counted.").format(missing))
 	return columns(), data, "<br>".join(lines)
 
 
 def persons(doc) -> list[str]:
-	"""The persons with a trade in the record: a listed company, an entered trade profit, entered net earnings or a
-	Class 2 payment."""
+	"""The persons with a trade in the record: a listed company, an entered trade profit, entered net earnings, a
+	first year or a Class 2 payment. A person marked as paying no Class 2 contributions is left out."""
 	found = []
 	for person, prefix in ((tax_year.SELF, "self"), (tax_year.SPOUSE, "spouse")):
 		if person == tax_year.SPOUSE and doc.status != income_tax.MARRIED:
+			continue
+		if doc.get(f"{prefix}_no_class2"):
 			continue
 		if (
 			any(row.person == person for row in doc.companies)
@@ -51,25 +59,27 @@ def persons(doc) -> list[str]:
 
 
 def person_rows(doc, person: str, today) -> tuple[list[dict], str]:
+	"""Rows of one person with a total row, and the note on base, category and source."""
 	prefix = "self" if person == tax_year.SELF else "spouse"
 	year = tax_year.basis_year(doc)
 	first_year = bool(doc.get(f"{prefix}_first_year"))
+	before_1962 = bool(doc.get(f"{prefix}_born_before_1962"))
 	base, origin = tax_year.class2_base(doc, person)
 	if base is None and not first_year:
-		return [], origin
-	weekly = class2.weekly_rate(year, base or 0, bool(doc.get(f"{prefix}_born_before_1962")), first_year)
+		return [], origin + "."
+	weekly = class2.weekly_rate(year, base or 0, before_1962, first_year)
 	periods = class2.periods(
 		year,
 		weekly.rate,
 		getdate(doc.get(f"{prefix}_active_from")) if doc.get(f"{prefix}_active_from") else None,
 		getdate(doc.get(f"{prefix}_active_to")) if doc.get(f"{prefix}_active_to") else None,
 	)
-	parts, excess = allocation.allocate(
-		[p.amount for p in periods], tax_year.payments(doc, tax_year.CLASS2, person)
-	)
+	payments = tax_year.payments(doc, tax_year.CLASS2, person)
+	parts, excess = allocation.allocate([p.amount for p in periods], payments)
 	rows = []
 	for period, paid_parts in zip(periods, parts, strict=True):
 		paid = allocation.paid(paid_parts)
+		late = allocation.late_parts(period.amount, period.due, paid_parts, today, class2.late_addition)
 		rows.append(
 			{
 				"person": _(person),
@@ -81,14 +91,11 @@ def person_rows(doc, person: str, today) -> tuple[list[dict], str]:
 				"amount": flt(period.amount),
 				"paid": flt(paid),
 				"paid_on": max(d for d, _amount in paid_parts) if paid_parts else None,
-				"addition": flt(
-					allocation.late_addition(
-						period.amount, period.due, paid_parts, today, class2.late_addition
-					)
-				),
+				"addition": flt(allocation.late_addition(late)),
 				"open": flt(period.amount - paid),
 			}
 		)
+	open_rest = any(row["open"] > 0 for row in rows)
 	rows.append(
 		{
 			"person": _(person),
@@ -100,10 +107,14 @@ def person_rows(doc, person: str, today) -> tuple[list[dict], str]:
 			"open": flt(sum(row["open"] for row in rows), 2),
 		}
 	)
-	return rows, note(weekly, base, origin, first_year, excess)
+	later_year = any(paid_on.year > year for paid_on, _amount in payments) or (
+		open_rest and today.year > year
+	)
+	arrears = later_year and not before_1962 and year <= rules.CLASS2_ARREARS_AT_LATER_RATE_UNTIL
+	return rows, note(weekly, base, origin, first_year, excess, arrears)
 
 
-def note(weekly, base, origin: str, first_year: bool, excess: Decimal) -> str:
+def note(weekly, base, origin: str, first_year: bool, excess: Decimal, arrears: bool) -> str:
 	table = weekly.table
 	if first_year:
 		text = _("first calendar year of the self-occupation, lowest rate {0}").format(class2.SA)
@@ -116,6 +127,11 @@ def note(weekly, base, origin: str, first_year: bool, excess: Decimal) -> str:
 	text += _("; rates of {0}: {1} ({2})").format(table.year, table.source, table.status)
 	if excess:
 		text += _("; payments of {0} exceed the contributions of the year").format(flt(excess))
+	if arrears:
+		text += _(
+			"; contributions of this year paid in a later year: for a person born from 1962, SSA art. 116(5) set "
+			"the rate of the time of payment until 2025, and the report shows the rate of the contribution year"
+		)
 	return text + "."
 
 

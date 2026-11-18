@@ -13,11 +13,6 @@ from decimal import Decimal
 from malta_compliance.tax import allocation, class2, income_tax, late, provisional_tax, rules
 from malta_compliance.tax.income_tax import JOINT, MARRIED, SEPARATE, SINGLE, SINGLE_PARENT, TaxInput
 
-
-def tax(basis_year: int, status: str = SINGLE, **amounts) -> income_tax.TaxResult:
-	return income_tax.compute(TaxInput(basis_year=basis_year, status=status, **amounts))
-
-
 # Rise of the tax at a band limit, for the tables that are not continuous there.
 STEPS = {
 	(rules.SINGLE, 2020, 19500): 90,
@@ -25,6 +20,15 @@ STEPS = {
 	(rules.MARRIED, 2020, 28700): 120,
 	(rules.PARENT_ONE_CHILD, 2026, 60000): 5,
 }
+
+
+def tax(basis_year: int, status: str = SINGLE, **amounts) -> income_tax.TaxResult:
+	return income_tax.compute(TaxInput(basis_year=basis_year, status=status, **amounts))
+
+
+def pt_addition(amount, due: date, until: date) -> Decimal:
+	"""Additional tax on provisional tax of basis year 2025."""
+	return provisional_tax.additional_tax(amount, due, until, 2025)
 
 
 class TestRateTables(unittest.TestCase):
@@ -66,9 +70,9 @@ class TestRateTables(unittest.TestCase):
 
 class TestIncomeTax(unittest.TestCase):
 	def test_tax_is_rounded_at_fifty_cents(self):
-		self.assertEqual(tax(2021, earned_self=13010).tax_charged, 586)  # 586.50
-		self.assertEqual(tax(2021, earned_self=13004).tax_charged, 586)  # 585.60
-		self.assertEqual(tax(2021, earned_self=13002).tax_charged, 585)  # 585.30
+		self.assertEqual(tax(2021, earned_self=13010).tax_charged, 586, "586.50 is rounded down")
+		self.assertEqual(tax(2021, earned_self=13004).tax_charged, 586, "585.60 is rounded up")
+		self.assertEqual(tax(2021, earned_self=13002).tax_charged, 585, "585.30 is rounded down")
 
 	def test_income_boxes_drop_cents_and_deductions_round_up(self):
 		result = tax(
@@ -179,28 +183,25 @@ class TestProvisionalTax(unittest.TestCase):
 		self.assertEqual([r.amount for r in provisional_tax.instalments(1235, 2026)], [247, 371, 618])
 		self.assertEqual([r.amount for r in provisional_tax.instalments(0, 2026)], [0, 0, 0])
 
-	def test_reduction_form_limits_the_later_instalments(self):
+	def test_reduction_form_limits_the_instalments_due_after_it(self):
 		self.assertEqual([r.amount for r in provisional_tax.instalments(1000, 2026, 800)], [200, 300, 300])
 		self.assertEqual([r.amount for r in provisional_tax.instalments(1000, 2026, 150)], [150, 0, 0])
+		filed = date(2026, 7, 10)
+		unpaid = provisional_tax.instalments(1000, 2026, 150, filed, lambda until: Decimal(0))
+		self.assertEqual([r.amount for r in unpaid], [200, 150, 150])
+		paid_in_august = provisional_tax.instalments(
+			1000, 2026, 150, filed, lambda until: Decimal(150) if until >= date(2026, 8, 31) else Decimal(0)
+		)
+		self.assertEqual([r.amount for r in paid_in_august], [200, 150, 0])
 
 	def test_additional_tax_counts_the_months_after_the_due_month(self):
 		first_due = date(2025, 4, 30)
-		self.assertEqual(
-			provisional_tax.additional_tax(400, first_due, date(2025, 4, 30), 2025), Decimal("0.00")
-		)
-		self.assertEqual(
-			provisional_tax.additional_tax(400, first_due, date(2025, 5, 10), 2025), Decimal("2.40")
-		)
-		self.assertEqual(
-			provisional_tax.additional_tax(400, first_due, date(2027, 1, 1), 2025), Decimal("33.60")
-		)
+		self.assertEqual(pt_addition(400, first_due, date(2025, 4, 30)), Decimal("0.00"))
+		self.assertEqual(pt_addition(400, first_due, date(2025, 5, 10)), Decimal("2.40"))
+		self.assertEqual(pt_addition(400, first_due, date(2027, 1, 1)), Decimal("33.60"))
 		third_due = date(2025, 12, 21)
-		self.assertEqual(
-			provisional_tax.additional_tax(1000, third_due, date(2025, 12, 28), 2025), Decimal("0.00")
-		)
-		self.assertEqual(
-			provisional_tax.additional_tax(1000, third_due, date(2026, 8, 15), 2025), Decimal("36.00")
-		)
+		self.assertEqual(pt_addition(1000, third_due, date(2025, 12, 28)), Decimal("0.00"))
+		self.assertEqual(pt_addition(1000, third_due, date(2026, 8, 15)), Decimal("36.00"))
 
 	def test_additional_tax_rate_by_month(self):
 		self.assertEqual(rules.monthly_rate(rules.PT_ADDITIONAL_TAX, date(2019, 12, 1)).percent, Decimal("1"))
@@ -211,18 +212,40 @@ class TestProvisionalTax(unittest.TestCase):
 			rules.monthly_rate(rules.PT_ADDITIONAL_TAX, date(2022, 6, 1)).percent, Decimal("0.6")
 		)
 		across = late.addition(1000, date(2022, 4, 30), date(2022, 7, 5), rules.PT_ADDITIONAL_TAX)
-		self.assertEqual(across, Decimal("15.30"))  # May 0.33%, June and July 0.6%
+		self.assertEqual(across, Decimal("15.30"), "May at 0.33%, June and July at 0.6%")
 
-	def test_reduction_where_the_final_tax_is_below_the_benchmark(self):
-		rows = [
-			(400, Decimal(400), Decimal("33.60")),
-			(600, Decimal(600), Decimal("36.00")),
-			(1000, Decimal(1000), Decimal("36.00")),
+	def test_remission_on_unpaid_instalments_above_the_final_tax(self):
+		unpaid = [
+			(400, [(Decimal(400), Decimal("33.60"))]),
+			(600, [(Decimal(600), Decimal("36.00"))]),
+			(1000, [(Decimal(1000), Decimal("36.00"))]),
 		]
-		self.assertEqual(provisional_tax.reduction(rows, 1000), Decimal("32.40"))
-		self.assertEqual(provisional_tax.reduction(rows, 2000), Decimal("0.00"))
-		partly_paid = [(500, Decimal(400), Decimal("8.00"))]
-		self.assertEqual(provisional_tax.reduction(partly_paid, 200), Decimal("5.40"))
+		self.assertEqual(provisional_tax.reduction(unpaid, 1000), Decimal("32.40"))
+		self.assertEqual(provisional_tax.reduction(unpaid, 2000), Decimal("0.00"))
+
+	def test_remission_on_instalments_paid_late(self):
+		instalments = provisional_tax.instalments(2000, 2025)
+		paid_on, as_of = date(2026, 3, 15), date(2026, 8, 1)
+		rows = [
+			(
+				i.amount,
+				allocation.late_parts(i.amount, i.due, [(paid_on, Decimal(i.amount))], as_of, pt_addition),
+			)
+			for i in instalments
+		]
+		additions = [allocation.late_addition(parts) for _amount, parts in rows]
+		self.assertEqual(additions, [Decimal("26.40"), Decimal("25.20"), Decimal("18.00")])
+		self.assertEqual(provisional_tax.reduction(rows, 1000), Decimal("16.20"))
+
+	def test_remission_counts_the_parts_paid_first_as_the_tax_due(self):
+		third = provisional_tax.instalments(2000, 2025)[2]
+		parts = allocation.late_parts(
+			third.amount, third.due, [(date(2026, 2, 10), Decimal(500))], date(2026, 8, 1), pt_addition
+		)
+		self.assertEqual(parts, [(Decimal(500), Decimal("6.00")), (Decimal(500), Decimal("18.00"))])
+		rows = [(400, []), (600, []), (third.amount, parts)]
+		self.assertEqual(provisional_tax.reduction(rows, 1500), Decimal("16.20"))
+		self.assertEqual(provisional_tax.reduction(rows, 1250), Decimal("18.90"))
 
 
 class TestClass2(unittest.TestCase):
@@ -270,11 +293,15 @@ class TestClass2(unittest.TestCase):
 		ended = class2.periods(2023, 1, active_to=date(2023, 2, 28))
 		self.assertEqual([r.weeks for r in ended], [9, 0, 0])
 
-	def test_late_addition(self):
+	def test_further_contribution_until_2025(self):
 		self.assertEqual(class2.late_addition(100, date(2023, 8, 31), date(2023, 11, 15)), Decimal("3.00"))
 		self.assertEqual(class2.late_addition(100, date(2023, 8, 31), date(2023, 8, 31)), Decimal("0.00"))
+
+	def test_interest_from_2026_at_the_rate_for_the_date_payable(self):
 		self.assertEqual(class2.late_addition(100, date(2026, 4, 30), date(2026, 6, 1)), Decimal("1.20"))
 		self.assertEqual(class2.late_addition(100, date(2025, 12, 21), date(2026, 2, 1)), Decimal("1.20"))
+		across = class2.late_addition(100, date(2021, 4, 30), date(2026, 2, 10))
+		self.assertEqual(across, Decimal("56.66"), "56 months at 1%, two months at 0.33%")
 
 	def test_years_outside_the_tables_are_not_covered(self):
 		with self.assertRaises(rules.NotCovered):
@@ -291,13 +318,15 @@ class TestAllocation(unittest.TestCase):
 		self.assertEqual(allocation.allocate([100], [(early, Decimal(150))])[1], Decimal(50))
 
 	def test_addition_on_late_parts_and_on_the_unpaid_rest(self):
-		due = date(2026, 4, 30)
-		parts = [(date(2026, 4, 20), Decimal(100)), (date(2026, 6, 10), Decimal(100))]
-
-		def addition(amount, due_date, until):
-			return provisional_tax.additional_tax(amount, due_date, until, 2026)
-
-		# 100 paid in time, 100 two months late, 200 unpaid for four months, each month at 0.6%.
+		due = date(2025, 4, 30)
+		paid = [(date(2025, 4, 20), Decimal(100)), (date(2025, 6, 10), Decimal(100))]
+		parts = allocation.late_parts(400, due, paid, date(2025, 8, 15), pt_addition)
 		self.assertEqual(
-			allocation.late_addition(400, due, parts, date(2026, 8, 15), addition), Decimal("6.00")
+			parts,
+			[
+				(Decimal(100), Decimal("0.00")),
+				(Decimal(100), Decimal("1.20")),
+				(Decimal(200), Decimal("4.80")),
+			],
 		)
+		self.assertEqual(allocation.late_addition(parts), Decimal("6.00"))

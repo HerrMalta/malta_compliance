@@ -17,6 +17,7 @@
   "section_items",
   "items",
   "section_class2",
+  "self_no_class2",
   "self_born_before_1962",
   "self_first_year",
   "self_active_from",
@@ -24,6 +25,7 @@
   "self_class2_base_entered",
   "self_class2_base",
   "column_break_class2",
+  "spouse_no_class2",
   "spouse_born_before_1962",
   "spouse_first_year",
   "spouse_active_from",
@@ -35,6 +37,7 @@
   "pt_benchmark",
   "column_break_pt",
   "pt_reduced",
+  "pt_reduced_on",
   "pt_reduced_total",
   "section_payments",
   "payments",
@@ -129,6 +132,13 @@
   },
   {
    "default": "0",
+   "description": "For a person in insurable employment or past the age of 65 (SSA art. 2).",
+   "fieldname": "self_no_class2",
+   "fieldtype": "Check",
+   "label": "Self: No Class 2 Contributions"
+  },
+  {
+   "default": "0",
    "fieldname": "self_born_before_1962",
    "fieldtype": "Check",
    "label": "Self: Born before 1962"
@@ -168,6 +178,14 @@
   {
    "fieldname": "column_break_class2",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.status==\"Married\"",
+   "description": "For a person in insurable employment or past the age of 65 (SSA art. 2).",
+   "fieldname": "spouse_no_class2",
+   "fieldtype": "Check",
+   "label": "Spouse: No Class 2 Contributions"
   },
   {
    "default": "0",
@@ -239,6 +257,14 @@
    "fieldname": "pt_reduced",
    "fieldtype": "Check",
    "label": "P.T. Reduction Form Filed"
+  },
+  {
+   "depends_on": "eval:doc.pt_reduced",
+   "description": "Instalments due before this date keep their amount.",
+   "fieldname": "pt_reduced_on",
+   "fieldtype": "Date",
+   "label": "Form Filed on",
+   "mandatory_depends_on": "eval:doc.pt_reduced"
   },
   {
    "depends_on": "eval:doc.pt_reduced",

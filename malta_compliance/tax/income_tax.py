@@ -51,6 +51,7 @@ class Computation:
 
 	@property
 	def tax_after_rebate(self) -> int:
+		"""Tax less the rebate for certain income brackets."""
 		return self.tax - self.rebate
 
 
@@ -74,7 +75,7 @@ class TaxResult:
 	balance: Decimal
 
 	def computations(self) -> list[Computation]:
-		"""The computations the tax charged rests on."""
+		"""Computations used for the tax charged."""
 		if self.single:
 			return [self.single]
 		if self.computation == JOINT:
@@ -98,6 +99,8 @@ def tax_euro(amount) -> int:
 
 
 def tax_on(chargeable_income: int, table: rules.RateTable, basis_year: int) -> Computation:
+	"""Tax and rebate on one chargeable income under one table; an income equal to a band limit falls into the
+	lower band, and a negative income is taxed as nil."""
 	income = max(0, chargeable_income)
 	band = next(b for b in table.bands if b.upper is None or income <= b.upper)
 	tax = max(0, tax_euro(Decimal(income) * band.rate / 100 - band.subtract))
@@ -138,9 +141,8 @@ def joint_table(inp: TaxInput) -> rules.RateTable:
 
 def compute(inp: TaxInput) -> TaxResult:
 	"""Tax of the return. Married: other income less deductions goes to the spouse with the higher earned income, to
-	the first spouse where both are equal (return boxes 24e and 24f), and the lower of the joint and the separate
-	tax is charged. Single parent: the married table, unless a table for parents with children gives less tax (ITA
-	art. 56(1)(b)(iii))."""
+	the first spouse where both are equal (return boxes 24e and 24f); single parent: the married table, unless a
+	table for parents with children gives less tax (ITA art. 56(1)(b)(iii))."""
 	earned_self = whole_euro(inp.earned_self)
 	earned_spouse = whole_euro(inp.earned_spouse) if inp.status == MARRIED else 0
 	other_net = whole_euro(inp.other_income) - deduction_euro(inp.deductions)
@@ -165,7 +167,7 @@ def compute(inp: TaxInput) -> TaxResult:
 	else:
 		single = tax_on(earned_self + other_net, individual_table(inp), inp.basis_year)
 		tax_charged = single.tax_after_rebate
-	credits = whole_euro(inp.tax_credits)
+	credits = tax_euro(inp.tax_credits)
 	tax_due = max(0, tax_charged - credits)
 	payments = Decimal(str(inp.tax_at_source)) + Decimal(str(inp.provisional_tax))
 	return TaxResult(

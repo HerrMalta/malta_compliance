@@ -1,6 +1,8 @@
 """Figures of a Malta Tax Year record for the reports: the input of the income tax computation from the books and
-the entered amounts, the provisional tax benchmark from the record of the basis year two years earlier, and the
-Class 2 base from the record of the preceding year. Records of the same taxpayer are found by the field Taxpayer.
+the entered amounts, the payments of a year, the provisional tax benchmark from the record of the basis year two
+years earlier, and the Class 2 base from the record of the preceding year. Records of the same taxpayer are found
+by the field Taxpayer. A record lists the payments made in its calendar year; a payment for the preceding year
+carries a kind saying so and is read by the reports of that year.
 """
 
 from datetime import date
@@ -10,7 +12,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from malta_compliance.tax import books, income_tax, provisional_tax
+from malta_compliance.tax import books, income_tax, provisional_tax, rules
 
 # Persons of a record.
 SELF = "Self"
@@ -20,19 +22,26 @@ SPOUSE = "Spouse"
 TRADE = "Trade Profit or Loss"  # box 2
 EMPLOYMENT = "Employment or Pension Income"  # boxes 1, 3 and 4
 OTHER_INCOME = "Other Income"  # box 15
-DEDUCTION = "Deduction"  # box 22
+DEDUCTION = "Deduction"  # box 22, with the trading losses brought forward of box 21
 TAX_CREDIT = "Tax Credit"  # boxes 28 to 30
 TAX_AT_SOURCE = "Tax at Source"  # boxes 35 and 38 to 40
 
-# Kinds of payments.
+# Kinds of payments. A row without a kind, or with the kind Other, is not counted.
 PROVISIONAL_TAX = "Provisional Tax"
-SETTLEMENT = "Settlement"
+PROVISIONAL_TAX_PRECEDING = "Provisional Tax of the Preceding Year"
+SETTLEMENT_PRECEDING = "Settlement of the Preceding Year"
 CLASS2 = "Class 2 Contribution"
+CLASS2_PRECEDING = "Class 2 Contribution of the Preceding Year"
+OTHER = "Other"
+
+# Kind under which the record of the following year lists a late payment of the kind.
+PRECEDING = {PROVISIONAL_TAX: PROVISIONAL_TAX_PRECEDING, CLASS2: CLASS2_PRECEDING}
 
 CHILDREN = {"0": 0, "1": 1, "2 or more": 2}
 
 
 def basis_year(doc) -> int:
+	"""Basis year of the record as a number."""
 	return int(doc.basis_year)
 
 
@@ -46,19 +55,31 @@ def company_profits(doc) -> list[tuple[str, str, int]]:
 
 
 def item_amount(item) -> int:
-	"""Amount of an entered row as it enters the return: deductions rounded up, the other kinds without cents."""
-	return (
-		income_tax.deduction_euro(item.amount)
-		if item.kind == DEDUCTION
-		else income_tax.whole_euro(item.amount)
-	)
+	"""Amount of an entered row as it enters the return: income without cents, a deduction rounded up, tax
+	credits and tax at source rounded at fifty cents."""
+	if item.kind == DEDUCTION:
+		return income_tax.deduction_euro(item.amount)
+	if item.kind in (TAX_CREDIT, TAX_AT_SOURCE):
+		return income_tax.tax_euro(item.amount)
+	return income_tax.whole_euro(item.amount)
 
 
 def item_total(doc, kind: str, person: str | None = None) -> int:
+	"""Total of the entered rows of a kind, of one person or of both."""
 	return sum(item_amount(i) for i in doc.items if i.kind == kind and (person is None or i.person == person))
 
 
-def payments(doc, kind: str, person: str | None = None) -> list[tuple[date, Decimal]]:
+def find(taxpayer: str, year: int):
+	"""The record of the taxpayer for the basis year, or None; the user needs the right to read it."""
+	name = frappe.db.get_value("Malta Tax Year", {"taxpayer": taxpayer, "basis_year": str(year)})
+	if not name:
+		return None
+	doc = frappe.get_doc("Malta Tax Year", name)
+	doc.check_permission("read")
+	return doc
+
+
+def _rows(doc, kind: str, person: str | None) -> list[tuple[date, Decimal]]:
 	return [
 		(getdate(p.posting_date), Decimal(str(p.amount)))
 		for p in doc.payments
@@ -66,8 +87,32 @@ def payments(doc, kind: str, person: str | None = None) -> list[tuple[date, Deci
 	]
 
 
+def payments(doc, kind: str, person: str | None = None) -> list[tuple[date, Decimal]]:
+	"""(date, amount) of the payments of a kind for the year of the record: its own rows, and the rows of the
+	record of the following year listed as payments for the preceding year."""
+	rows = _rows(doc, kind, person)
+	if kind in PRECEDING:
+		later = find(doc.taxpayer, basis_year(doc) + 1)
+		if later:
+			rows += _rows(later, PRECEDING[kind], person)
+	return rows
+
+
 def payment_total(doc, kind: str, person: str | None = None) -> Decimal:
+	"""Total of payments(doc, kind, person)."""
 	return sum((amount for _paid_on, amount in payments(doc, kind, person)), Decimal(0))
+
+
+def settlement_total(doc) -> Decimal:
+	"""Tax of the year paid on settlement: the rows of that kind in the record of the following year."""
+	later = find(doc.taxpayer, basis_year(doc) + 1)
+	rows = _rows(later, SETTLEMENT_PRECEDING, None) if later else []
+	return sum((amount for _paid_on, amount in rows), Decimal(0))
+
+
+def without_kind(doc) -> int:
+	"""Number of payment rows without a kind."""
+	return sum(1 for p in doc.payments if not p.kind)
 
 
 def net_earnings(doc, person: str) -> int:
@@ -78,10 +123,12 @@ def net_earnings(doc, person: str) -> int:
 
 
 def earned_income(doc, person: str) -> int:
+	"""Income of a person in return boxes 1 to 4."""
 	return net_earnings(doc, person) + item_total(doc, EMPLOYMENT, person)
 
 
 def tax_input(doc) -> income_tax.TaxInput:
+	"""Input of the income tax computation from the books and the entered amounts of the record."""
 	return income_tax.TaxInput(
 		basis_year=basis_year(doc),
 		status=doc.status,
@@ -98,29 +145,43 @@ def tax_input(doc) -> income_tax.TaxInput:
 
 
 def tax_result(doc) -> income_tax.TaxResult:
+	"""Income tax computation of the record."""
 	return income_tax.compute(tax_input(doc))
 
 
-def find(taxpayer: str, year: int):
-	"""The record of the taxpayer for the basis year, or None."""
-	name = frappe.db.get_value("Malta Tax Year", {"taxpayer": taxpayer, "basis_year": str(year)})
-	return frappe.get_doc("Malta Tax Year", name) if name else None
+def tax_payable(doc) -> int:
+	"""Tax payable of the year before provisional tax: the tax charged, as filed where the return is filed, less
+	tax credits and tax at source."""
+	if doc.filed:
+		charged = income_tax.tax_euro(doc.filed_tax)
+	else:
+		try:
+			charged = tax_result(doc).tax_charged
+		except rules.NotCovered:
+			frappe.throw(
+				_(
+					"The record of basis year {0} is not filed and no rate table covers that year: enter its tax "
+					"as filed."
+				).format(doc.basis_year)
+			)
+	due = max(0, charged - item_total(doc, TAX_CREDIT))
+	return provisional_tax.benchmark(due, item_total(doc, TAX_AT_SOURCE))
 
 
 def pt_benchmark(doc) -> tuple[int, str]:
 	"""Benchmark of the provisional tax of the year and a note naming its origin: the entered amount, else the tax
-	of the record two years earlier, as filed or as computed, less its tax credits and tax at source."""
+	payable of the record two years earlier."""
 	if doc.pt_benchmark_entered:
 		return income_tax.whole_euro(doc.pt_benchmark), _("Benchmark entered on the record")
 	year = provisional_tax.benchmark_year(basis_year(doc))
 	earlier = find(doc.taxpayer, year)
 	if not earlier:
-		return 0, _("No record of basis year {0}: no benchmark, no provisional tax").format(year)
-	tax = income_tax.whole_euro(earlier.filed_tax) if earlier.filed else tax_result(earlier).tax_charged
-	due = max(0, tax - item_total(earlier, TAX_CREDIT))
+		return 0, _(
+			"No record of basis year {0}: benchmark 0. Enter the benchmark of the P.T. demand if one exists"
+		).format(year)
 	origin = _("as filed") if earlier.filed else _("as computed")
 	note = _("Tax charged for basis year {0} {1}, less tax credits and tax at source").format(year, origin)
-	return provisional_tax.benchmark(due, item_total(earlier, TAX_AT_SOURCE)), note
+	return tax_payable(earlier), note
 
 
 def class2_base(doc, person: str) -> tuple[int | None, str]:

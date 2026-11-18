@@ -31,16 +31,23 @@ def allocate(
 
 
 def paid(parts: list[tuple[date, Decimal]]) -> Decimal:
+	"""Total of the parts paid."""
 	return sum((amount for _paid_on, amount in parts), Decimal(0))
 
 
-def late_addition(
+def late_parts(
 	due_amount, due: date, parts: list[tuple[date, Decimal]], today: date, addition: Callable
-) -> Decimal:
-	"""Addition on one amount due: on each part from the due date to its payment, and on the unpaid rest until
-	today. addition(amount, due, until) gives the addition of one part."""
-	total = sum((addition(amount, due, paid_on) for paid_on, amount in parts), Decimal(0))
+) -> list[tuple[Decimal, Decimal]]:
+	"""(amount, addition) of each part of one amount due, in the order of payment, with the unpaid rest last. The
+	addition of a part runs from the due date to its payment, that of the rest until today; addition(amount, due,
+	until) computes it."""
+	rows = [(amount, addition(amount, due, paid_on)) for paid_on, amount in parts]
 	rest = Decimal(str(due_amount)) - paid(parts)
 	if rest > 0:
-		total += addition(rest, due, today)
-	return total
+		rows.append((rest, addition(rest, due, today)))
+	return rows
+
+
+def late_addition(rows: list[tuple[Decimal, Decimal]]) -> Decimal:
+	"""Total addition of the parts returned by late_parts."""
+	return sum((added for _amount, added in rows), Decimal(0))

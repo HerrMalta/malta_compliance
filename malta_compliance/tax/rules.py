@@ -390,17 +390,20 @@ CLASS2_TABLES = (
 	_class2(2027, _MTCA_CLASS2, MTCA_TABLE, "37.15", "12877.04", "28000.00", "80.77", "29863.36", "86.14"),
 )
 
-# Addition on Class 2 contributions not paid by their due date, keyed to the first day of each month of delay: the
-# further contribution of SSA art. 116(1)(c), from 2026 the interest of ITMA art. 44(2A).
-CLASS2_LATE = (
-	MonthlyRate(date(2000, 1, 3), date(2025, 12, 31), Decimal("1"), "SSA art. 116(1)(c)"),
-	MonthlyRate(
-		date(2026, 1, 1), None, Decimal("0.6"), "SSA art. 116(1) proviso (Act III of 2026); S.L. 372.28"
-	),
+# Further contribution on Class 2 contributions not paid by their due date, for each month of delay up to the end of
+# 2025 (SSA art. 116(1)(c)). For the months from 2026 the interest of ITMA art. 44(2A) applies, at the rate of
+# TAX_INTEREST for the date the contribution was payable and limited to the contribution.
+CLASS2_FURTHER_CONTRIBUTION = MonthlyRate(
+	date(2000, 1, 3), date(2025, 12, 31), Decimal("1"), "SSA art. 116(1)(c)"
 )
+CLASS2_INTEREST_SOURCE = "SSA art. 116(1) proviso (Act III of 2026 art. 27); ITMA art. 44(2A); S.L. 372.28"
+# Last contribution year for which arrears of a person born from 1962 were payable at the rate of the time of
+# payment (SSA art. 116(5), first proviso, until Act III of 2026).
+CLASS2_ARREARS_AT_LATER_RATE_UNTIL = 2025
 
 
 def rate_table(category: str, basis_year: int) -> RateTable:
+	"""The rate table of the category in force for the basis year."""
 	for table in RATE_TABLES:
 		if (
 			table.category == category
@@ -412,6 +415,7 @@ def rate_table(category: str, basis_year: int) -> RateTable:
 
 
 def bracket_rebate(category: str, basis_year: int) -> BracketRebate | None:
+	"""The rebate of the category for the basis year, or None."""
 	for rebate in BRACKET_REBATES:
 		if rebate.category == category and rebate.first <= basis_year <= rebate.last:
 			return rebate
@@ -419,6 +423,7 @@ def bracket_rebate(category: str, basis_year: int) -> BracketRebate | None:
 
 
 def class2_table(year: int) -> Class2Table:
+	"""The Class 2 table of the contribution year."""
 	for table in CLASS2_TABLES:
 		if table.year == year:
 			return table
@@ -426,6 +431,7 @@ def class2_table(year: int) -> Class2Table:
 
 
 def monthly_rate(versions: tuple[MonthlyRate, ...], on: date) -> MonthlyRate:
+	"""The version in force on the date."""
 	for version in versions:
 		if version.first <= on and (version.last is None or on <= version.last):
 			return version
