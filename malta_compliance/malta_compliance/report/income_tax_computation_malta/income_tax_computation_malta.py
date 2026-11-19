@@ -100,7 +100,7 @@ def tax_rows(result) -> list[dict]:
 				own.tax,
 				spouse.tax,
 				own.tax + spouse.tax,
-				table_note(own),
+				_("Rates: {0} (separate computation)").format(_(own.table.category)),
 			)
 		)
 		if own.rebate or spouse.rebate:
