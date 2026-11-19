@@ -24,6 +24,7 @@ Texts read on legislation.mt, mtca.gov.mt, socialsecurity.gov.mt and finance.gov
 | MTCA, Class 2 Social Security Contribution Rates | Tables of 1998 to 2027 | [mtca.gov.mt, Class 2 rates](https://mtca.gov.mt/personal-tax/fss/social-security-contribution-rates/class-2---social-security-contribution-rates) |
 | Social Security Department, "Social Security Contributions" | - | [socialsecurity.gov.mt](https://socialsecurity.gov.mt/en/information-and-applications-for-benefits-and-services/social-security-contributions/social-security-contributions/) |
 | Ministry for Finance, Budget Speech 2026 and Budget Speech 2027 | The speech for 2027 is dated 26 October 2026 | [finance.gov.mt, Budget 2027](https://finance.gov.mt/budget27/) |
+| IFRS Foundation, IAS 1 Presentation of Financial Statements, paragraph 51(e) (secondary for the return) | Superseded by IFRS 18, issued in 2024 | [ifrs.org, IAS 1](https://ifrs.org/issued-standards/list-of-standards/ias-1-presentation-of-financial-statements) |
 | ACCA, Taxation - Malta (TX-MLA), December 2022, question 5 and answers (secondary) | - | [accaglobal.com, answers](https://www.accaglobal.com/content/dam/ACCA_Global/Students/resourceFinder/txmla-2022-dec-a.pdf) |
 
 MTCA's tax manuals, guidelines, clarifications and FAQ pages, the Social Security Department's pages, both Budget speeches and the judgments of the Administrative Review Tribunal and the Court of Appeal (Inferior Jurisdiction) on ecourts.gov.mt hold no statement on the points listed under [Readings](#readings).
@@ -102,7 +103,9 @@ Conditions of the categories:
 
 ### Rounding
 
-The return guide rounds the boxes as follows: in determining the chargeable income any fraction of a euro is disregarded; a deduction against income is rounded up to one euro; in computing the tax due, a fraction of a euro equal to or less than fifty cents is disregarded and a higher fraction is rounded up to one euro.
+The return guide rounds the boxes as follows: in determining the chargeable income any fraction of a euro is disregarded; a deduction against income is rounded up to one euro; in computing the tax due, a fraction of a euro equal to or less than fifty cents is disregarded and a higher fraction is rounded up to one euro. ITA art. 56(19)(b) allows the Minister to direct by notice that, in determining the chargeable income and the tax due, the Commissioner may round any amount up or down to the nearest euro.
+
+The guide names no rule for the lines of the profit and loss account attached to the return. The app rounds each income and expense account of the books to the nearest euro and takes the net profit as the sum of the rounded accounts (see [Readings](#readings)).
 
 ### Rebate for certain income brackets
 
@@ -189,6 +192,7 @@ Points that no source states, with the reading applied by the app and its ground
 | Tables for taxpayers with children after basis year 2026 | The announced tables of 2027 and 2028 are applied and marked as announced | The tables of Act III of 2026 stay in force until an Act replaces them; the Budget Speech 2027 announces the amounts for 2027 and 2028, and MTCA's page "Tax Rates 2027" prints the tables of 2027 |
 | A single parent with qualifying children from basis year 2026 | The lower of the tax under the married table and under the table for parents with children | Art. 56(1)(b)(iii): the table of (a)(i) "unless that individual qualifies for a more beneficial tax rate" under (iv) or (v) |
 | A loss or a negative amount in a return box | The fraction of a euro is dropped | The return guide states the rule for income amounts only |
+| Net profit from the books | Each income and expense account is rounded to the nearest euro, a half away from zero, and the net profit is the sum of the rounded accounts; the income box then holds a whole amount | The return guide states its rounding rules for the boxes of the return and names none for the profit and loss account attached to it. A profit and loss account presented in whole euro rounds each line and shows the net profit as the sum of the rounded lines; the return takes that net profit. IAS 1.51(e) requires the level of rounding to be stated and sets no method. Rounding the exact profit instead can differ by a few euro, at most half a euro for each account |
 | Tax credits and tax deducted at source with cents | Rounded as tax: a fraction up to fifty cents is dropped, a higher one rounded up | The return guide states this rule for the computation of the tax due and names no rule for these boxes |
 | Benchmark where the earlier return holds tax credits | Tax charged less tax credits and tax at source | Rule 6(1) takes the tax payable shown in the self-assessment; the booklet's example deducts the tax at source |
 | An instalment ending on half a euro | Rounded up | Rule 3(3) rounds "up or down to the nearest euro" and names no rule for the half |

@@ -45,7 +45,10 @@ def income_rows(doc, result) -> list[dict]:
 	for company, person, profit in tax_year.company_profits(doc):
 		rows.append(
 			person_line(
-				_("Net profit or loss: {0}").format(company), person, profit, _("Books, calendar year")
+				_("Net profit or loss: {0}").format(company),
+				person,
+				profit,
+				_("Books, calendar year, each account rounded to the euro"),
 			)
 		)
 		interest = books.interest_income(company, year)

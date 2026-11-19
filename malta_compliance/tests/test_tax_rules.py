@@ -85,6 +85,13 @@ class TestIncomeTax(unittest.TestCase):
 		self.assertEqual(result.other_net, 699)
 		self.assertEqual(result.single.chargeable_income, 30699)
 
+	def test_profit_rounds_each_account_before_the_sum(self):
+		lines = [Decimal("4321.40"), Decimal("-1234.60"), Decimal("-210.50")]
+		self.assertEqual(income_tax.profit_euro(lines), 2875, "4,321 less 1,235 less 211")
+		self.assertEqual(income_tax.whole_euro(sum(lines)), 2876, "2,876.30 without the cents")
+		self.assertEqual([income_tax.account_euro(a) for a in (0.5, -0.5, 7.49, -7.49)], [1, -1, 7, -7])
+		self.assertEqual(income_tax.profit_euro([]), 0)
+
 	def test_married_couple_takes_the_lower_of_joint_and_separate(self):
 		separate = tax(2022, MARRIED, earned_self=30000, earned_spouse=5000)
 		self.assertEqual(separate.joint.tax, 4845)

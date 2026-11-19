@@ -47,10 +47,11 @@ def basis_year(doc) -> int:
 
 
 def company_profits(doc) -> list[tuple[str, str, int]]:
-	"""(company, person, net profit or loss in whole euro) of each listed company."""
+	"""(company, person, net profit or loss in whole euro) of each listed company, each account rounded to the
+	nearest euro before the sum."""
 	year = basis_year(doc)
 	return [
-		(row.company, row.person, income_tax.whole_euro(books.profit(row.company, year)))
+		(row.company, row.person, income_tax.profit_euro(books.profit_lines(row.company, year)))
 		for row in doc.companies
 	]
 

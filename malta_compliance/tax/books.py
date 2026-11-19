@@ -13,28 +13,35 @@ CLASS2_PAYMENTS = "3220"
 INTEREST_INCOME = "4920"
 
 
-def _result(interest: bool, company: str, year: int) -> float:
+def _balances(interest: bool, company: str, year: int) -> list[float]:
 	comparison = "=" if interest else "!="
 	rows = frappe.db.sql(
 		f"""select sum(gle.credit - gle.debit) from `tabGL Entry` gle join `tabAccount` acc on acc.name = gle.account
 		where gle.company = %s and gle.is_cancelled = 0 and gle.posting_date between %s and %s
 		and acc.root_type in ('Income', 'Expense') and gle.voucher_type != 'Period Closing Voucher'
-		and ifnull(acc.account_number, '') {comparison} %s""",
+		and ifnull(acc.account_number, '') {comparison} %s
+		group by gle.account order by gle.account""",
 		(company, getdate(f"{year}-01-01"), getdate(f"{year}-12-31"), INTEREST_INCOME),
 	)
-	return flt(rows[0][0]) if rows else 0.0
+	return [flt(row[0]) for row in rows]
+
+
+def profit_lines(company: str, year: int) -> list[float]:
+	"""Income less expenses of each income and expense account in the calendar year, the basis period of an
+	individual (ITA art. 11(1)): the lines of the profit and loss account, income positive and expenses negative,
+	without the interest income on account 4920 and without the entries of a Period Closing Voucher."""
+	return _balances(False, company, year)
 
 
 def profit(company: str, year: int) -> float:
-	"""Income less expenses of the calendar year, the basis period of an individual (ITA art. 11(1)), without the
-	interest income on account 4920 and without the entries of a Period Closing Voucher."""
-	return _result(False, company, year)
+	"""Sum of profit_lines, to the cent."""
+	return flt(sum(profit_lines(company, year)), 2)
 
 
 def interest_income(company: str, year: int) -> float:
 	"""Interest income of the calendar year on account 4920: investment income, outside the trade profit and
 	outside the earnings of SSA art. 2."""
-	return _result(True, company, year)
+	return flt(sum(_balances(True, company, year)), 2)
 
 
 def payments(companies: list[str], first, last) -> list:

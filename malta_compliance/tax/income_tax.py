@@ -5,7 +5,7 @@ contributions of the taxpayer are not a deduction. No Frappe imports.
 """
 
 from dataclasses import dataclass
-from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_HALF_DOWN, Decimal
+from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_HALF_DOWN, ROUND_HALF_UP, Decimal
 
 from malta_compliance.tax import rules
 
@@ -86,6 +86,17 @@ class TaxResult:
 def whole_euro(amount) -> int:
 	"""Income box of the return: the fraction of a euro is dropped."""
 	return int(Decimal(str(amount)).quantize(Decimal(1), rounding=ROUND_DOWN))
+
+
+def account_euro(amount) -> int:
+	"""Line of a profit and loss account: rounded to the nearest euro, a half away from zero."""
+	return int(Decimal(str(amount)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def profit_euro(lines) -> int:
+	"""Net profit or loss of a profit and loss account in whole euro: the sum of its lines, income positive and
+	expenses negative, each rounded with account_euro before the sum."""
+	return sum(account_euro(amount) for amount in lines)
 
 
 def deduction_euro(amount) -> int:
