@@ -1,0 +1,24 @@
+{
+ "app": "malta_compliance",
+ "creation": "2026-11-19 16:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "malta-tax-soft",
+   "link_to": "Malta Compliance",
+   "link_type": "Sidebar",
+   "title": "Malta Compliance"
+  }
+ ],
+ "modified": "2026-11-19 16:00:00.000000",
+ "modified_by": "Administrator",
+ "mount_on": "erpnext",
+ "name": "malta_compliance",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}

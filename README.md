@@ -2,6 +2,10 @@
 
 Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)
 
+### Desk
+
+The entry "Malta Compliance" on ERPNext's rail, the column of module icons at the left of the desk, opens the sidebar "Malta Compliance" with Malta Taxpayer, Malta Tax Year and the five reports. The Dock record `malta_compliance/dock/malta_compliance/malta_compliance.json` mounts the entry on ERPNext's rail; Frappe shows no apps-screen tile for a mounted app. The icons of the entry and of the sidebar header are in `malta_compliance/public/icons/module-icons.svg`.
+
 ### Company setup for a self-employed individual
 
 `malta_compliance.setup.company.setup_company` sets up an ERPNext company for a self-employed individual in Malta:
@@ -58,6 +62,7 @@ Tests, on a test site with ERPNext and the setup wizard completed:
 bench --site <test site> run-tests --module malta_compliance.tests.test_capital_allowances
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_rules
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_year
+bench --site <test site> run-tests --module malta_compliance.tests.test_desk
 ```
 
 `test_tax_rules` also runs without a site: `python -m unittest malta_compliance.tests.test_tax_rules`.

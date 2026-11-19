@@ -1,0 +1,23 @@
+<!-- Module icon of Malta Compliance: a tax form with a percent sign. "malta-tax-soft" is the rail entry
+     (Dock record), drawn with the soft-icon classes of Frappe's icons.scss like ERPNext's rail icons.
+     "malta-tax-duotone" is the sidebar header icon, filled from the custom properties duotone-dark and
+     duotone-light like ERPNext's header icons. Loaded into the desk by app_include_icons in hooks.py. -->
+
+<svg id="malta-compliance-module-symbols" aria-hidden="true" style="display: none;" class="icon" xmlns="http://www.w3.org/2000/svg">
+	<symbol id="icon-malta-tax-soft" viewBox="0 0 24 24" class="soft-icon">
+		<path d="M7.5 2.5H14l5 5v11.5a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 19V5a2.5 2.5 0 0 1 2.5-2.5Z" class="soft-body"/>
+		<path d="M14 2.5V6a1.5 1.5 0 0 0 1.5 1.5H19"/>
+		<path d="M8.5 7h3" class="soft-accent-line"/>
+		<circle cx="9.5" cy="12.5" r="1.25"/>
+		<circle cx="14.5" cy="17.5" r="1.25"/>
+		<path d="m15 11.5-6 7"/>
+	</symbol>
+	<symbol viewBox="0 0 24 24" id="icon-malta-tax-duotone" stroke="none">
+		<path d="M7 2H14L19 7V20A2 2 0 0 1 17 22H7A2 2 0 0 1 5 20V4A2 2 0 0 1 7 2Z" style="fill: var(--duotone-dark, light-dark(var(--ink-gray-5), var(--ink-gray-6)))" />
+		<path d="M14 2V5.6A1.4 1.4 0 0 0 15.4 7H19Z" style="fill: var(--duotone-light, var(--ink-gray-3))" />
+		<rect x="7.5" y="5.4" width="4" height="1.4" rx="0.7" style="fill: var(--duotone-light, var(--ink-gray-3))" />
+		<circle cx="9.4" cy="12.4" r="1.6" style="fill: var(--duotone-light, var(--ink-gray-3))" />
+		<circle cx="14.6" cy="17.6" r="1.6" style="fill: var(--duotone-light, var(--ink-gray-3))" />
+		<path d="M15.2 11.2 8.8 18.8" style="fill: none; stroke: var(--duotone-light, var(--ink-gray-3)); stroke-width: 1.5; stroke-linecap: round" />
+	</symbol>
+</svg>

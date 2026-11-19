@@ -12,25 +12,11 @@ app_license = "mit"
 
 required_apps = ["erpnext"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "malta_compliance",
-# 		"logo": "/assets/malta_compliance/logo.png",
-# 		"title": "Malta Compliance",
-# 		"route": "/malta_compliance",
-# 		"has_permission": "malta_compliance.api.permission.has_app_permission",
-# 	}
-# ]
+# The desk entry is the Dock record in dock/malta_compliance/malta_compliance.json, mounted on ERPNext's rail
+# (mount_on). Frappe shows no apps-screen tile for a mounted app, so add_to_apps_screen is not declared.
 
-# The dock, the rail down the left of the desk, is a document rather than a hook. Author it in
-# Manage Dock on a developer-mode site and press Export to App, and it is written to
-# `malta_compliance/dock/malta_compliance/malta_compliance.json` for git to carry. An app that ships none has no
-# rail: its sidebar gets a switcher in the header instead.
-#
-# A companion app, one that extends a host app rather than standing on its own, says so with
-# `mount_on` on that same record, and its entries are appended to the host's rail. Mounting keeps
-# the companion off the apps screen, so it takes precedence over any add_to_apps_screen above.
+# Icons of the rail entry and the sidebar header.
+app_include_icons = ["/assets/malta_compliance/icons/module-icons.svg"]
 
 # Includes in <head>
 # ------------------
