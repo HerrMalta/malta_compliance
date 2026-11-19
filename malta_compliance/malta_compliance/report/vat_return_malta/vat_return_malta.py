@@ -59,7 +59,7 @@ def rows(data: books.ReturnData, filters) -> list[dict]:
 	box numbers of both columns (base_box, tax_box) for scripts reading the report."""
 	result = []
 	for line in LINES:
-		base, tax = data.result.amounts[line.key]
+		base, tax = data.result.base(line.key), data.result.tax(line.key)
 		row = {
 			"key": line.key,
 			"line": _(line.label),
@@ -70,7 +70,9 @@ def rows(data: books.ReturnData, filters) -> list[dict]:
 			"indent": INDENT.get(line.kind, 1),
 			"bold": 1 if line.kind in (SECTION, FINAL, RESULT) else 0,
 		}
-		if line.kind != SECTION:
+		if line.kind == SECTION:
+			row["base"] = row["tax"] = None
+		else:
 			row["base"] = None if line.columns == TAX_ONLY else flt(base / 100, 2)
 			row["tax"] = None if line.columns == BASE_ONLY else flt(tax / 100, 2)
 		result.append(row)
@@ -130,6 +132,16 @@ def notes(data: books.ReturnData) -> list[str]:
 				listed(data.drafts)
 			)
 		)
+	booked = _("the invoices as booked give {0}").format(money(result.booked))
+	if result.booked != result.tax("26") - result.tax("33"):
+		booked += _(", the difference is rounding and goes to Round Off with the settlement entry")
+	lines.append(
+		_(
+			"VAT of purchases (boxes 6, 7, 13 to 15 and 34 to 38) is the rate times the tax base of each line, "
+			"unrounded until shown, as in the tax accountant's returns; VAT of sales is the VAT as invoiced. "
+			"VAT payable without boxes 40 and 41: {0}, {1}."
+		).format(money(result.tax("26") - result.tax("33")), booked)
+	)
 	lines += result.notes
 	if data.ignored_rows:
 		lines.append(_("Tax rows not counted as VAT: {0}.").format(listed(data.ignored_rows)))
@@ -158,8 +170,8 @@ def settlement_notes(data: books.ReturnData) -> list[str]:
 	if not data.settlements:
 		return [_("Not settled: no settlement entry covers the period.")]
 	lines = []
-	# VAT payable of the invoices, without the adjustments of boxes 40 and 41.
-	invoiced = data.result.tax("26") - data.result.tax("33")
+	# VAT payable of the invoices as booked, which a settlement entry clears.
+	invoiced = data.result.booked
 	for entry in data.settlements:
 		state = _("submitted") if entry.docstatus == 1 else _("draft")
 		if (entry.from_date, entry.to_date) != (data.from_date, data.to_date):
@@ -171,13 +183,13 @@ def settlement_notes(data: books.ReturnData) -> list[str]:
 			continue
 		lines.append(
 			_(
-				"Settled by {0} ({1}): VAT payable as filed {2} on {3}; the invoices gave {4} when it was created."
+				"Settled by {0} ({1}): VAT payable as filed {2} on {3}; the invoices as booked gave {4} when it was created."
 			).format(entry.name, state, money(entry.filed), data.accounts["settlement"], money(entry.cleared))
 		)
 		if entry.cleared != invoiced:
 			lines.append(
 				_(
-					"The invoices of the period now give {0}: a document of this period was booked, changed or "
+					"The invoices of the period as booked now give {0}: a document of this period was booked, changed or "
 					"cancelled after the settlement entry."
 				).format(money(invoiced))
 			)

@@ -7,6 +7,7 @@ Run: bench --site <test site> run-tests --module malta_compliance.tests.test_vat
 
 import unittest
 from datetime import date
+from fractions import Fraction
 
 from malta_compliance.vat import categories, return_form
 from malta_compliance.vat.categories import BASE, CATEGORIES, NO_RETURN_BOX, RATE, TARGETS
@@ -203,6 +204,61 @@ class TestCompute(unittest.TestCase):
 		self.assertEqual([e[0] for e in r.entries["3_nr18"]], [private])
 		self.assertEqual([e[0] for e in r.entries["9a"]], [services])
 		self.assertNotIn("3", r.entries)
+
+
+class TestRounding(unittest.TestCase):
+	"""Purchase VAT is the rate times the tax base of a line, unrounded until shown; sales VAT is as invoiced."""
+
+	def test_purchase_vat_from_the_box_total(self):
+		# Three invoices of 10.03 at 18%: 1.81 booked on each, 5.4162 on the total.
+		r = compute([purchase(OVERHEADS, 1_003, input_vat=181) for _ in range(3)])
+		self.assertEqual(r.tax("31"), 542)
+		self.assertEqual(r.tax("33"), 542)
+		self.assertEqual(r.tax("42"), -542)
+		self.assertEqual(r.booked, -543)
+		self.assertEqual([e[2] for e in r.entries["31"]], [181, 181, 181])
+
+	def test_reverse_charge_from_the_box_total(self):
+		r = compute([purchase(EU_SERVICES, 1_003, 181, 181, (18, 18)) for _ in range(3)])
+		self.assertEqual(r.tax("3"), 542)
+		self.assertEqual(r.tax("9a"), 542)
+		self.assertEqual(r.tax("17"), 0)
+		self.assertEqual(r.booked, 0)
+
+	def test_totals_from_unrounded_lines(self):
+		r = compute(
+			[purchase(EU_SERVICES, 1_003, 181, 181, (18, 18)), purchase(NON_EU, 1_003, 181, 181, (18, 18))]
+		)
+		self.assertEqual((r.tax("3"), r.tax("4")), (181, 181))
+		self.assertEqual(r.tax("5"), 361)
+		self.assertEqual(r.tax("12"), 361)
+
+	def test_box_17_from_unrounded_lines(self):
+		r = compute(
+			[purchase(PRIVATE, 1_003, 181, 0, (18, 18)), purchase(EU_SERVICES, 1_003, 181, 181, (18, 18))]
+		)
+		self.assertEqual(r.tax("5"), 361)
+		self.assertEqual(r.tax("12"), 181)
+		self.assertEqual(r.tax("17"), 181)
+		self.assertEqual(r.tax("42"), 181)
+		self.assertEqual(r.booked, 181)
+
+	def test_sales_vat_as_invoiced(self):
+		r = compute([sale(MALTA_18, 10_000, 1_803, 18)])
+		self.assertEqual(r.tax("18"), 1_803)
+		self.assertEqual(r.tax("42"), 1_803)
+		self.assertEqual(r.booked, 1_803)
+
+	def test_mixed_rates_counted_as_booked(self):
+		r = compute([purchase(OVERHEADS, 10_000, input_vat=1_234, rates=(18, 5))])
+		self.assertEqual(r.tax("31"), 1_234)
+		self.assertEqual(len(r.notes), 1)
+		self.assertIn("as booked", r.notes[0])
+
+	def test_shown_rounds_half_away_from_zero(self):
+		self.assertEqual(return_form.shown(Fraction(1, 2)), 1)
+		self.assertEqual(return_form.shown(Fraction(-1, 2)), -1)
+		self.assertEqual(return_form.shown(Fraction(149, 100)), 1)
 
 
 class TestPeriods(unittest.TestCase):

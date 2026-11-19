@@ -1,14 +1,20 @@
 """Maltese VAT return of a registration under Article 10, computed from the invoices of a period, in the lines of
 the tax accountant's worksheet with the boxes of the return form, and the amounts of the settlement entry that
-clears the VAT accounts of a period. Imports no Frappe; amounts are integer cents, positive VAT payable is owed to
-the Commissioner for Revenue and negative VAT payable is an excess credit.
+clears the VAT accounts of a period. Imports no Frappe; amounts are cents, positive VAT payable is owed to the
+Commissioner for Revenue and negative VAT payable is an excess credit.
+
+The VAT of purchases, self-charged and deducted, is the rate times the tax base of each line, kept exact and
+rounded only when shown, so that totals and box 17 come from the unrounded values; the VAT of sales is the VAT
+as invoiced. Both reproduce the tax accountant's returns, which differ by cents from the VAT booked per invoice.
 """
 
 import calendar
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
+from fractions import Fraction
 
-from malta_compliance.vat.categories import BASE, INPUT, OUTPUT, RATE, TARGETS
+from malta_compliance.vat.categories import BASE, DIRECTION, INPUT, OUTPUT, PURCHASE, RATE, TARGETS
 
 # Kinds of line.
 SECTION = "section"
@@ -156,22 +162,32 @@ class Invoice:
 
 @dataclass
 class Result:
-	"""amounts: [tax base, tax amount] per line key. entries: the invoices of each line with the amounts entered on
-	it, on the sub-line where one receives them. outside: invoices of the category without a return box; unknown:
-	invoices without a category of the return."""
+	"""amounts: [tax base, exact tax amount] per line key. entries: the invoices of each line with their tax base
+	and booked VAT, on the sub-line where one receives them. outside: invoices of the category without a return
+	box; unknown: invoices without a category of the return. booked: the VAT payable of the counted invoices as
+	booked, which the VAT accounts hold."""
 
-	amounts: dict[str, list[int]]
+	amounts: dict[str, list]
 	entries: dict[str, list[tuple[Invoice, int, int]]] = field(default_factory=dict)
 	counted: list[Invoice] = field(default_factory=list)
 	outside: list[Invoice] = field(default_factory=list)
 	unknown: list[Invoice] = field(default_factory=list)
 	notes: list[str] = field(default_factory=list)
+	booked: int = 0
 
 	def base(self, key: str) -> int:
 		return self.amounts[key][0]
 
 	def tax(self, key: str) -> int:
-		return self.amounts[key][1]
+		"""The tax amount of a line in whole cents, as shown."""
+		return shown(self.amounts[key][1])
+
+
+def shown(value) -> int:
+	"""Exact cents rounded to whole cents, half away from zero."""
+	value = Fraction(value)
+	exact = Decimal(value.numerator) / Decimal(value.denominator)
+	return int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
 def money(cents: int) -> str:
@@ -198,11 +214,11 @@ def compute(
 	result = Result(amounts={line.key: [0, 0] for line in LINES})
 	amounts = result.amounts
 
-	def enter(key: str, invoice: Invoice, tax: int, listed: bool) -> None:
+	def enter(key: str, invoice: Invoice, tax, booked: int, listed: bool) -> None:
 		amounts[key][0] += invoice.base
 		amounts[key][1] += tax
 		if listed:
-			result.entries.setdefault(key, []).append((invoice, invoice.base, tax))
+			result.entries.setdefault(key, []).append((invoice, invoice.base, booked))
 
 	for invoice in invoices:
 		targets = TARGETS.get(invoice.category or "")
@@ -220,20 +236,27 @@ def compute(
 					f"{invoice.name}: {name} VAT {money(vat)} in the category {invoice.category}, whose boxes hold "
 					f"no {name} VAT; not counted."
 				)
+		result.booked += (invoice.output_vat if OUTPUT in parts else 0) - (
+			invoice.input_vat if INPUT in parts else 0
+		)
+		rate = single_rate(invoice)
+		computed = DIRECTION[invoice.category] == PURCHASE and rate is not None
+		if DIRECTION[invoice.category] == PURCHASE and rate is None:
+			result.notes.append(f"{invoice.name}: VAT rows of different rates; its VAT is counted as booked.")
 		for line_key, selector, part in targets:
-			tax = {OUTPUT: invoice.output_vat, INPUT: invoice.input_vat}.get(part, 0)
+			booked = {OUTPUT: invoice.output_vat, INPUT: invoice.input_vat}.get(part, 0)
+			tax = invoice.base * Fraction(str(rate)) / 100 if computed and part != BASE else booked
 			sub_key = selector
 			if selector == RATE:
-				rate = single_rate(invoice)
 				sub_key = SUB_BY_RATE.get((line_key, rate))
 				if sub_key is None:
 					what = "VAT rows of different rates" if rate is None else f"the rate {rate}%"
 					result.notes.append(
 						f"{invoice.name}: {what}, no sub-line of box {LINE[line_key].box}; counted in the box only."
 					)
-			enter(line_key, invoice, tax, listed=not sub_key)
+			enter(line_key, invoice, tax, booked, listed=not sub_key)
 			if sub_key:
-				enter(sub_key, invoice, tax, listed=True)
+				enter(sub_key, invoice, tax, booked, listed=True)
 
 	for key, members in SUBTOTALS.items():
 		amounts[key] = [sum(amounts[m][0] for m in members), sum(amounts[m][1] for m in members)]

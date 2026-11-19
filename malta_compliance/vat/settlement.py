@@ -66,11 +66,10 @@ def blocking(data: books.ReturnData) -> list[str]:
 				", ".join(name for _doctype, name, _amount in data.differences)
 			)
 		)
-	box42 = data.result.tax("42")
-	if not problems and data.books_payable != box42:
+	if not problems and data.books_payable != data.result.booked:
 		problems.append(
-			_("The VAT accounts give a VAT payable of {0}, the invoices {1}.").format(
-				money(data.books_payable), money(box42)
+			_("The VAT accounts give a VAT payable of {0}, the invoices as booked {1}.").format(
+				money(data.books_payable), money(data.result.booked)
 			)
 		)
 	if not problems and not any(data.movements.values()):
@@ -95,7 +94,7 @@ def entry(data: books.ReturnData, amounts: return_form.Settlement, filed: int):
 		)
 	remark = _(
 		"VAT settlement {0} ({1} to {2}), report VAT Return Malta: VAT payable as filed {3} on {4}, VAT payable of "
-		"the invoices {5}"
+		"the invoices as booked {5}"
 	).format(
 		data.label,
 		data.from_date,

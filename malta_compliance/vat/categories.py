@@ -107,3 +107,4 @@ CATEGORIES = (
 RENAMED = {"VAT Box 18/24 Malta 5%": ("VAT Box 19/24 Malta 5%", "0.5.0")}
 
 TARGETS = {title: targets for title, _direction, targets, _rows in CATEGORIES}
+DIRECTION = {title: direction for title, direction, _targets, _rows in CATEGORIES}
