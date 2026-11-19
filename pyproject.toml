@@ -3,7 +3,7 @@ name = "malta_compliance"
 authors = [
     { name = "HerrMalta", email = "247870707+HerrMalta@users.noreply.github.com"}
 ]
-description = "Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)"
+description = "Malta tax helpers for ERPNext: VAT return, income tax, provisional tax and social security contributions (SSC)"
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

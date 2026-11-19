@@ -15,7 +15,7 @@ import frappe
 from erpnext.accounts.doctype.account.chart_of_accounts.chart_of_accounts import create_charts
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from malta_compliance.setup import capital_allowances
+from malta_compliance.setup import capital_allowances, vat
 from malta_compliance.setup.vat import account, setup_vat
 
 CHART_FILE = os.path.join(os.path.dirname(__file__), "chart_self_employed.json")
@@ -80,6 +80,7 @@ def setup_company(
 	# it is one transaction.
 	create_custom_fields(CUSTOM_FIELDS, update=True)
 	capital_allowances.ensure_custom_fields()
+	vat.ensure_custom_fields()
 	frappe.db.commit()
 	for year in fiscal_years or ():
 		ensure_fiscal_year(int(year))

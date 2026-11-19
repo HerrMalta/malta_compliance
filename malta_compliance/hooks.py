@@ -1,9 +1,7 @@
 app_name = "malta_compliance"
 app_title = "Malta Compliance"
 app_publisher = "HerrMalta"
-app_description = (
-	"Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)"
-)
+app_description = "Malta tax helpers for ERPNext: VAT return, income tax, provisional tax and social security contributions (SSC)"
 app_email = "247870707+HerrMalta@users.noreply.github.com"
 app_license = "mit"
 
@@ -268,10 +266,17 @@ app_include_icons = ["/assets/malta_compliance/icons/module-icons.svg"]
 # ignore_translatable_strings_from = []
 
 
+# Custom fields of the capital allowances and of the VAT settlement
+# -----------------------------------------------------------------
+
+after_install = [
+	"malta_compliance.setup.capital_allowances.after_install",
+	"malta_compliance.setup.vat.after_install",
+]
+
 # Capital allowances (docs/capital-allowances.md)
 # -----------------------------------------------
 
-after_install = "malta_compliance.setup.capital_allowances.after_install"
 after_migrate = ["malta_compliance.assets.selfcheck.run"]
 
 override_doctype_class = {

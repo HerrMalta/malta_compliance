@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 malta_compliance.patches.v0_3.capital_allowances
 malta_compliance.patches.v0_4.taxpayer_records
+malta_compliance.patches.v0_5.vat_return

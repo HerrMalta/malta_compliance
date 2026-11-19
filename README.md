@@ -1,10 +1,10 @@
 ### Malta Compliance
 
-Malta tax helpers for ERPNext: income tax, provisional tax and social security contributions (SSC)
+Malta tax helpers for ERPNext: VAT return, income tax, provisional tax and social security contributions (SSC)
 
 ### Desk
 
-The entry "Malta Compliance" on ERPNext's rail, the column of module icons at the left of the desk, opens the sidebar "Malta Compliance" with Malta Taxpayer, Malta Tax Year and the five reports. The Dock record `malta_compliance/dock/malta_compliance/malta_compliance.json` mounts the entry on ERPNext's rail; Frappe shows no apps-screen tile for a mounted app. The icons of the entry and of the sidebar header are in `malta_compliance/public/icons/module-icons.svg`.
+The entry "Malta Compliance" on ERPNext's rail, the column of module icons at the left of the desk, opens the sidebar "Malta Compliance" with Malta Taxpayer, Malta Tax Year and the six reports. The Dock record `malta_compliance/dock/malta_compliance/malta_compliance.json` mounts the entry on ERPNext's rail; Frappe shows no apps-screen tile for a mounted app. The icons of the entry and of the sidebar header are in `malta_compliance/public/icons/module-icons.svg`.
 
 ### Company setup for a self-employed individual
 
@@ -21,6 +21,18 @@ bench --site <site> execute malta_compliance.setup.company.setup_company --kwarg
 ```
 
 `malta_compliance.setup.vat.boxes()` returns the VAT return boxes of each tax category.
+
+### VAT return
+
+The report "VAT Return Malta" computes the VAT return of a registration under Article 10 for a calendar quarter, or for other dates such as the first period of a new registration, from the submitted Sales and Purchase Invoices of the period by their tax categories (`malta_compliance/vat/categories.py`). Opening invoices are left out.
+
+- **Layout**: the lines of the tax accountant's worksheet in four sections (intra-community and non-EU trade, reverse charge, domestic supplies and exports, domestic purchases and imports) with the box numbers of the MTCA return form, the sub-lines by rate, the subtotals and the lines of boxes 17, 26 and 42. A sub-line without a tax category shows 0.00. Print and PDF follow the worksheet (`vat_return_malta.html`).
+- **Amounts**: the tax base is the net total in company currency; the VAT is the amount of the tax rows on the VAT accounts 1310, 1320, 2210, 2220 and 3230, as invoiced and not recomputed from the base. Box 42 is box 26 plus box 40 less boxes 39 and 41; Tax Payable is box 42 less the Excess Credit B/F, and Excess Credit is the negative of Tax Payable when it is below zero. Boxes 40 and 41 and the credit brought forward are filters of the report.
+- **Checks**, in the note under the report: invoices without a VAT category of the return, drafts dated in the period, tax rows not counted as VAT, entries on the VAT accounts not explained by the counted invoices, and the settlement entry of the period. "Show Invoices" lists each invoice under its line.
+- **Settlement**: "Create VAT Settlement" (Accounts Manager) creates a draft Journal Entry dated the last day of the period. It clears the period's movements of 1310, 1320, 2210 and 2220 against 2290 VAT Settlement at the VAT payable as filed in box 42, with a difference of at most 0.10 to the books on the Round Off account of the company; 3230 holds the VAT on private acquisitions and is not cleared. The entry carries the period in the Journal Entry fields "VAT Return From" and "VAT Return To"; the report names it and reports a later change of the period's invoices. A period with drafts, invoices without a category of the return, unexplained entries on the VAT accounts or an existing settlement entry is not settled. Refunds and payments are booked on 2290 from the bank statement. Scripts call `malta_compliance.vat.settlement.create_settlement`.
+- **Not covered**: registrations under Article 11 or Article 12, the recapitulative statement, partial exemption, and settlement entries with adjustments of boxes 40 and 41.
+
+The lines, the totals and the settlement amounts are computed in `malta_compliance/vat/return_form.py`, which imports no Frappe.
 
 ### Capital allowances
 
@@ -63,9 +75,10 @@ bench --site <test site> run-tests --module malta_compliance.tests.test_capital_
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_rules
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_year
 bench --site <test site> run-tests --module malta_compliance.tests.test_desk
+bench --site <test site> run-tests --module malta_compliance.tests.test_vat_return
 ```
 
-`test_tax_rules` also runs without a site: `python -m unittest malta_compliance.tests.test_tax_rules`.
+`test_tax_rules` and `test_vat_return` also run without a site: `python -m unittest malta_compliance.tests.test_tax_rules malta_compliance.tests.test_vat_return`.
 
 ### Installation
 

@@ -1,0 +1,49 @@
+{%
+	const rows = (original_data || data).filter((row) => row.kind);
+	const amount = (value) => (value === null || value === undefined ? "" : format_number(value, null, 2));
+	const boxed = ["box", "total", "final"];
+	const label = (row) => {
+		if (row.kind === "invoice") {
+			return [frappe.datetime.str_to_user(row.posting_date), row.voucher_no, row.line].join("   ");
+		}
+		return boxed.includes(row.kind) && row.box ? `Box ${row.box} - ${row.line}` : row.line;
+	};
+	const indent = (row) => (row.kind === "invoice" ? `padding-left: ${cint(row.indent) * 20 + 4}px;` : "");
+	const period = rows.length ? rows[0].period_label : "";
+%}
+<style>
+	.mc-vat { width: 100%; border-collapse: collapse; font-size: 10px; }
+	.mc-vat th, .mc-vat td { padding: 2px 6px; border: none; vertical-align: bottom; }
+	.mc-vat .mc-number { text-align: right; white-space: nowrap; width: 15%; }
+	.mc-vat .mc-head th { font-weight: bold; border-bottom: 2px solid #000; text-align: center; }
+	.mc-vat .mc-head th:first-child { text-align: left; }
+	.mc-vat .mc-columns th { font-weight: bold; border-bottom: 1px solid #000; padding-top: 12px; }
+	.mc-vat .mc-section td { font-weight: bold; border-bottom: 1px solid #000; padding-top: 4px; }
+	.mc-vat .mc-box td:first-child, .mc-vat .mc-total td:first-child { padding-left: 24px; }
+	.mc-vat .mc-sub td:first-child { padding-left: 44px; }
+	.mc-vat .mc-invoice td { color: #555; font-size: 9px; }
+	.mc-vat .mc-final td { font-weight: bold; border-bottom: 1px solid #000; padding-top: 6px; }
+	.mc-vat .mc-result td { font-weight: bold; border-bottom: 3px double #000; padding-top: 16px; }
+</style>
+<table class="mc-vat">
+	<thead>
+		<tr class="mc-head">
+			<th>{%= filters.company %}</th>
+			<th class="mc-number" colspan="2">{%= period %}</th>
+		</tr>
+		<tr class="mc-columns">
+			<th></th>
+			<th class="mc-number">{%= __("Tax base") %}</th>
+			<th class="mc-number">{%= __("Tax amount") %}</th>
+		</tr>
+	</thead>
+	<tbody>
+		{% for (const row of rows) { %}
+		<tr class="mc-{%= row.kind %}">
+			<td style="{%= indent(row) %}">{%= label(row) %}</td>
+			<td class="mc-number">{%= amount(row.base) %}</td>
+			<td class="mc-number">{%= amount(row.tax) %}</td>
+		</tr>
+		{% } %}
+	</tbody>
+</table>
