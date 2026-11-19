@@ -1,0 +1,205 @@
+{
+ "actions": [],
+ "autoname": "field:taxpayer_name",
+ "creation": "2026-11-18 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "taxpayer_name",
+  "status",
+  "column_break_status",
+  "children",
+  "child_tables",
+  "section_self",
+  "self_year_of_birth",
+  "self_occupied_from",
+  "column_break_self",
+  "self_occupied_until",
+  "self_no_class2",
+  "section_spouse",
+  "spouse_name",
+  "spouse_year_of_birth",
+  "spouse_occupied_from",
+  "column_break_spouse",
+  "spouse_occupied_until",
+  "spouse_no_class2",
+  "section_companies",
+  "companies",
+  "section_returns",
+  "returns"
+ ],
+ "fields": [
+  {
+   "description": "Name of the person or of the responsible spouse. Yearly records with this Taxpayer take precedence over the figures built from this record.",
+   "fieldname": "taxpayer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Taxpayer",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Single",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tax Status",
+   "options": "Single\nMarried\nSingle Parent",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Children of ITA art. 56(1): not over 18 years, or not over 23 years in full-time education.",
+   "fieldname": "children",
+   "fieldtype": "Select",
+   "label": "Qualifying Children",
+   "options": "0\n1\n2 or more"
+  },
+  {
+   "default": "0",
+   "description": "Condition of the rate tables for taxpayers with children, from basis year 2026.",
+   "fieldname": "child_tables",
+   "fieldtype": "Check",
+   "label": "EU/EEA National or Long-term Resident"
+  },
+  {
+   "fieldname": "section_self",
+   "fieldtype": "Section Break",
+   "label": "Self"
+  },
+  {
+   "description": "Sets the Class 2 category of a person born before 1962.",
+   "fieldname": "self_year_of_birth",
+   "fieldtype": "Int",
+   "label": "Year of Birth",
+   "non_negative": 1
+  },
+  {
+   "description": "First day of the self-occupation. Its calendar year is charged at the lowest Class 2 rate.",
+   "fieldname": "self_occupied_from",
+   "fieldtype": "Date",
+   "label": "Self-occupied from"
+  },
+  {
+   "fieldname": "column_break_self",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "self_occupied_until",
+   "fieldtype": "Date",
+   "label": "Self-occupied until"
+  },
+  {
+   "default": "0",
+   "description": "For a person in insurable employment or past the age of 65 (SSA art. 2).",
+   "fieldname": "self_no_class2",
+   "fieldtype": "Check",
+   "label": "No Class 2 Contributions"
+  },
+  {
+   "fieldname": "section_spouse",
+   "fieldtype": "Section Break",
+   "label": "Spouse",
+   "depends_on": "eval:doc.status=='Married'"
+  },
+  {
+   "fieldname": "spouse_name",
+   "fieldtype": "Data",
+   "label": "Name of the Spouse"
+  },
+  {
+   "description": "Sets the Class 2 category of a person born before 1962.",
+   "fieldname": "spouse_year_of_birth",
+   "fieldtype": "Int",
+   "label": "Year of Birth",
+   "non_negative": 1
+  },
+  {
+   "description": "First day of the self-occupation. Its calendar year is charged at the lowest Class 2 rate.",
+   "fieldname": "spouse_occupied_from",
+   "fieldtype": "Date",
+   "label": "Self-occupied from"
+  },
+  {
+   "fieldname": "column_break_spouse",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "spouse_occupied_until",
+   "fieldtype": "Date",
+   "label": "Self-occupied until"
+  },
+  {
+   "default": "0",
+   "description": "For a person in insurable employment or past the age of 65 (SSA art. 2).",
+   "fieldname": "spouse_no_class2",
+   "fieldtype": "Check",
+   "label": "No Class 2 Contributions"
+  },
+  {
+   "fieldname": "section_companies",
+   "fieldtype": "Section Break",
+   "label": "Companies in the Books",
+   "description": "The company of each person's trade. Its profit and its payments on 3210 and 3220 enter the years without a return in the table below."
+  },
+  {
+   "fieldname": "companies",
+   "fieldtype": "Table",
+   "label": "Companies",
+   "options": "Malta Tax Year Company"
+  },
+  {
+   "fieldname": "section_returns",
+   "fieldtype": "Section Break",
+   "label": "Returns as Filed",
+   "description": "One row per filed return. A year with a row takes its profits and tax from it, not from the books; the net profits are the Class 2 base of the following year."
+  },
+  {
+   "fieldname": "returns",
+   "fieldtype": "Table",
+   "label": "Returns",
+   "options": "Malta Taxpayer Return"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-18 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Malta Compliance",
+ "name": "Malta Taxpayer",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "taxpayer_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "taxpayer_name",
+ "track_changes": 1
+}

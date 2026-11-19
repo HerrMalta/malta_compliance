@@ -91,6 +91,10 @@ class TestMaltaTaxYear(unittest.TestCase):
 		cls.spouse = make_company("MTD")
 		for name in frappe.get_all("Malta Tax Year", filters={"taxpayer": TAXPAYER}, pluck="name"):
 			frappe.delete_doc("Malta Tax Year", name, force=True)
+		if not frappe.db.exists("Malta Taxpayer", TAXPAYER):
+			frappe.get_doc(
+				{"doctype": "Malta Taxpayer", "taxpayer_name": TAXPAYER, "status": "Married"}
+			).insert()
 		journal("income", cls.own, "2025-03-31", "3200", "4100", 60000)
 		journal("expense", cls.own, "2025-06-30", "5200", "3200", 10000)
 		journal("interest", cls.own, "2025-07-01", "3200", "4920", 500)
@@ -127,24 +131,21 @@ class TestMaltaTaxYear(unittest.TestCase):
 		self.assertEqual(self.year.fetch_payments(), 3)
 		self.assertEqual(self.year.fetch_payments(), 0)
 		self.assertEqual(self.following.fetch_payments(), 2)
-		self.assertEqual({p.kind or "" for p in [*self.year.payments, *self.following.payments]}, {""})
-		_rows, message = report_rows(provisional_tax_malta, self.year.name, as_of="2025-05-01")
-		self.assertIn("3 payments of the record have no kind", message)
-		assign(
-			self.year,
+		kinds = {str(p.posting_date): p.kind for p in [*self.year.payments, *self.following.payments]}
+		self.assertEqual(
+			kinds,
 			{
 				"2025-04-25": tax_year.PROVISIONAL_TAX,
 				"2025-09-10": tax_year.PROVISIONAL_TAX,
 				"2025-04-28": tax_year.CLASS2,
-			},
-		)
-		assign(
-			self.following,
-			{
 				"2026-01-15": tax_year.PROVISIONAL_TAX_PRECEDING,
 				"2026-07-10": tax_year.SETTLEMENT_PRECEDING,
 			},
 		)
+		assign(self.year, {**kinds, "2025-04-25": None})
+		_rows, message = report_rows(provisional_tax_malta, self.year.name, as_of="2025-05-01")
+		self.assertIn("1 payments of the record have no kind", message)
+		assign(self.year, kinds)
 
 	def test_2_income_tax_computation(self):
 		rows, message = report_rows(income_tax_computation_malta, self.year.name)

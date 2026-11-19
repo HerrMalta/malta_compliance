@@ -1,8 +1,9 @@
 """Figures of a Malta Tax Year record for the reports: the input of the income tax computation from the books and
 the entered amounts, the payments of a year, the provisional tax benchmark from the record of the basis year two
 years earlier, and the Class 2 base from the record of the preceding year. Records of the same taxpayer are found
-by the field Taxpayer. A record lists the payments made in its calendar year; a payment for the preceding year
-carries a kind saying so and is read by the reports of that year.
+by the field Taxpayer; a year without a record is built from the Malta Taxpayer of that name (tax/taxpayer.py). A
+record lists the payments made in its calendar year; a payment for the preceding year carries a kind saying so and
+is read by the reports of that year.
 """
 
 from datetime import date
@@ -70,10 +71,13 @@ def item_total(doc, kind: str, person: str | None = None) -> int:
 
 
 def find(taxpayer: str, year: int):
-	"""The record of the taxpayer for the basis year, or None; the user needs the right to read it."""
+	"""The record of the taxpayer for the basis year, else the year built from the Malta Taxpayer of that name, or
+	None; the user needs the right to read it."""
 	name = frappe.db.get_value("Malta Tax Year", {"taxpayer": taxpayer, "basis_year": str(year)})
 	if not name:
-		return None
+		from malta_compliance.tax import taxpayer as taxpayer_record
+
+		return taxpayer_record.built_year(taxpayer, year)
 	doc = frappe.get_doc("Malta Tax Year", name)
 	doc.check_permission("read")
 	return doc
@@ -103,11 +107,16 @@ def payment_total(doc, kind: str, person: str | None = None) -> Decimal:
 	return sum((amount for _paid_on, amount in payments(doc, kind, person)), Decimal(0))
 
 
-def settlement_total(doc) -> Decimal:
-	"""Tax of the year paid on settlement: the rows of that kind in the record of the following year."""
+def settlement_payments(doc) -> list[tuple[date, Decimal]]:
+	"""(date, amount) of the tax of the year paid on settlement: the rows of that kind in the record of the
+	following year."""
 	later = find(doc.taxpayer, basis_year(doc) + 1)
-	rows = _rows(later, SETTLEMENT_PRECEDING, None) if later else []
-	return sum((amount for _paid_on, amount in rows), Decimal(0))
+	return _rows(later, SETTLEMENT_PRECEDING, None) if later else []
+
+
+def settlement_total(doc) -> Decimal:
+	"""Total of settlement_payments(doc)."""
+	return sum((amount for _paid_on, amount in settlement_payments(doc)), Decimal(0))
 
 
 def without_kind(doc) -> int:

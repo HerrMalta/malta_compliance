@@ -49,13 +49,14 @@
  ],
  "fields": [
   {
-   "description": "Name of the person or of the responsible spouse. The records of the other years are found by this name.",
+   "description": "The Malta Taxpayer of the record. A new record takes its tax status, companies, Class 2 details and the return as filed from it; the records of the other years are found by this link.",
    "fieldname": "taxpayer",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Taxpayer",
-   "reqd": 1
+   "reqd": 1,
+   "options": "Malta Taxpayer"
   },
   {
    "description": "Calendar year of the income.",
@@ -313,7 +314,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-18 16:00:00.000000",
+ "modified": "2026-11-19 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Malta Compliance",
  "name": "Malta Tax Year",

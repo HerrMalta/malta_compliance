@@ -17,7 +17,12 @@ def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	doc = frappe.get_doc("Malta Tax Year", filters.malta_tax_year)
 	doc.check_permission("read")
-	today = getdate(filters.as_of or nowdate())
+	data, text = compute(doc, getdate(filters.as_of or nowdate()))
+	return columns(), data, text
+
+
+def compute(doc, today) -> tuple[list[dict], str]:
+	"""Rows of the three instalments with a total row, and the message, of a saved or built record."""
 	year = tax_year.basis_year(doc)
 	benchmark, origin = tax_year.pt_benchmark(doc)
 	payments = tax_year.payments(doc, tax_year.PROVISIONAL_TAX)
@@ -62,7 +67,7 @@ def execute(filters=None):
 			"open": flt(sum(row["open"] for row in data), 2),
 		}
 	)
-	return columns(), data, message(doc, benchmark, origin, reduced, excess, late_rows)
+	return data, message(doc, benchmark, origin, reduced, excess, late_rows)
 
 
 def message(doc, benchmark: int, origin: str, reduced, excess: Decimal, late_rows: list) -> str:

@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "creation": "2026-11-18 20:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "basis_year",
+  "self_net_profit",
+  "spouse_net_profit",
+  "chargeable_income",
+  "tax_charged",
+  "provisional_tax_paid"
+ ],
+ "fields": [
+  {
+   "fieldname": "basis_year",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Basis Year",
+   "length": 4,
+   "reqd": 1
+  },
+  {
+   "description": "Return box 2.",
+   "fieldname": "self_net_profit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Self: Net Profit"
+  },
+  {
+   "fieldname": "spouse_net_profit",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Spouse: Net Profit"
+  },
+  {
+   "description": "Return box 25.",
+   "fieldname": "chargeable_income",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Chargeable Income"
+  },
+  {
+   "description": "Return box 27. It is the base of the provisional tax two years later.",
+   "fieldname": "tax_charged",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Tax Charged",
+   "reqd": 1
+  },
+  {
+   "description": "Return box 36. Counted as paid on the instalment due dates where no provisional tax of the year is booked.",
+   "fieldname": "provisional_tax_paid",
+   "fieldtype": "Currency",
+   "label": "Provisional Tax Paid"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-18 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Malta Compliance",
+ "name": "Malta Taxpayer Return",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
