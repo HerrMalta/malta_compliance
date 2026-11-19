@@ -14,7 +14,16 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from fractions import Fraction
 
-from malta_compliance.vat.categories import BASE, DIRECTION, INPUT, OUTPUT, PURCHASE, RATE, TARGETS
+from malta_compliance.vat.categories import (
+	BASE,
+	DIRECTION,
+	INPUT,
+	OUTPUT,
+	PURCHASE,
+	RATE,
+	TARGETS,
+	TEMPLATE_RATE,
+)
 
 # Kinds of line.
 SECTION = "section"
@@ -147,7 +156,8 @@ MAX_ROUNDING = 10
 @dataclass(frozen=True)
 class Invoice:
 	"""A submitted invoice of the period. base is the net total in company currency; output_vat is the VAT charged on
-	a sale or self-charged on a purchase, input_vat the VAT deducted; rates are the rates of its VAT rows."""
+	a sale or self-charged on a purchase, input_vat the VAT deducted; rates are the rates of its VAT rows computed on
+	the net total (a row holding an amount, ERPNext's "Actual", has none)."""
 
 	doctype: str
 	name: str
@@ -240,6 +250,8 @@ def compute(
 			invoice.input_vat if INPUT in parts else 0
 		)
 		rate = single_rate(invoice)
+		if not invoice.rates and (invoice.output_vat or invoice.input_vat):
+			rate = TEMPLATE_RATE.get(invoice.category)
 		computed = DIRECTION[invoice.category] == PURCHASE and rate is not None
 		if DIRECTION[invoice.category] == PURCHASE and rate is None:
 			result.notes.append(f"{invoice.name}: VAT rows of different rates; its VAT is counted as booked.")

@@ -249,6 +249,14 @@ class TestRounding(unittest.TestCase):
 		self.assertEqual(r.tax("42"), 1_803)
 		self.assertEqual(r.booked, 1_803)
 
+	def test_amount_rows_take_the_template_rate(self):
+		# VAT rows holding the printed amount carry no rate; the category's template gives 18%.
+		r = compute([purchase(OVERHEADS, 1_003, input_vat=181, rates=()) for _ in range(3)])
+		self.assertEqual(r.tax("31"), 542)
+		self.assertEqual(r.booked, -543)
+		r = compute([purchase(NO_RETURN_BOX, 1_000, rates=()), purchase(OVERHEADS, 1_000, rates=())])
+		self.assertEqual(r.tax("31"), 0)
+
 	def test_mixed_rates_counted_as_booked(self):
 		r = compute([purchase(OVERHEADS, 10_000, input_vat=1_234, rates=(18, 5))])
 		self.assertEqual(r.tax("31"), 1_234)

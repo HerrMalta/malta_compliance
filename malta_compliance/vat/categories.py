@@ -108,3 +108,5 @@ RENAMED = {"VAT Box 18/24 Malta 5%": ("VAT Box 19/24 Malta 5%", "0.5.0")}
 
 TARGETS = {title: targets for title, _direction, targets, _rows in CATEGORIES}
 DIRECTION = {title: direction for title, direction, _targets, _rows in CATEGORIES}
+# Rate of the category's tax template, for invoices whose VAT rows carry an amount without a rate.
+TEMPLATE_RATE = {title: rows[0][1] for title, _direction, _targets, rows in CATEGORIES if rows}

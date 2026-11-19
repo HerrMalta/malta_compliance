@@ -114,7 +114,13 @@ def vat_return(
 		)
 		taxes = defaultdict(list)
 		if docs:
-			fields = ["parent", "account_head", "rate", "base_tax_amount_after_discount_amount"]
+			fields = [
+				"parent",
+				"account_head",
+				"charge_type",
+				"rate",
+				"base_tax_amount_after_discount_amount",
+			]
 			if doctype == "Purchase Invoice":
 				fields.append("add_deduct_tax")
 			for row in frappe.get_all(
@@ -158,7 +164,8 @@ def read_invoice(doctype: str, doc, rows, key_of: dict[str, str]):
 			if amount:
 				ignored.append(f"{doc.name}: {row.account_head} {money(amount)}")
 			continue
-		rates.append(flt(row.rate))
+		if row.charge_type != "Actual":
+			rates.append(flt(row.rate))
 		deduct = not sale and row.add_deduct_tax == "Deduct"
 		if key in OUTPUT_ACCOUNTS and (sale or deduct):
 			output += amount
