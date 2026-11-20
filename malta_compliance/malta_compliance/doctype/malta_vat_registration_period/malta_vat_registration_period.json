@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2026-11-20 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "article",
+  "registration_number",
+  "from_date",
+  "to_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "article",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Registration",
+   "options": "Article 10\nArticle 11\nArticle 12",
+   "reqd": 1
+  },
+  {
+   "description": "With the prefix MT for Articles 10 and 12; a number under Article 11 has no prefix.",
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registration Number"
+  },
+  {
+   "description": "Effective date of the registration. Empty: registered before the first day of the books.",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From"
+  },
+  {
+   "description": "Last day of the registration. Empty: still registered.",
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Until"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-20 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Malta Compliance",
+ "name": "Malta VAT Registration Period",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "autoname": "field:company",
+ "creation": "2026-11-20 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "column_break_company",
+  "activity",
+  "section_registrations",
+  "registrations"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_company",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Other activities",
+   "description": "Category of the Sixth Schedule to the VAT Act. It sets the turnover limit of a registration under Article 11 in the years up to 2024.",
+   "fieldname": "activity",
+   "fieldtype": "Select",
+   "label": "Activity",
+   "options": "Supply of goods\nServices with a low value added\nOther activities",
+   "reqd": 1
+  },
+  {
+   "description": "Registrations under Article 10 and Article 11 follow each other. A registration under Article 12 runs beside one under Article 11 and ends with a registration under Article 10.",
+   "fieldname": "section_registrations",
+   "fieldtype": "Section Break",
+   "label": "Registrations"
+  },
+  {
+   "fieldname": "registrations",
+   "fieldtype": "Table",
+   "label": "Registrations",
+   "options": "Malta VAT Registration Period",
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-20 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Malta Compliance",
+ "name": "Malta VAT Registration",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "company",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "company",
+ "track_changes": 1
+}

@@ -1,5 +1,6 @@
 """Compares the consolidated Maltese texts behind the rule registers (malta_compliance/assets/rules.py for capital
-allowances, malta_compliance/tax/rules.py for income tax, provisional tax and Class 2 contributions) with the
+allowances, malta_compliance/tax/rules.py for income tax, provisional tax and Class 2 contributions,
+malta_compliance/vat/rules.py for the VAT registrations under Articles 11 and 12) and behind the VAT return with the
 versions recorded in malta_compliance/assets/law_versions.json: the version date in the ELI path of legislation.mt
 and the SHA-256 of the consolidated PDF. The version path alone does not suffice; S.L. 123.01 keeps the version
 2010-07-22 although it holds an amendment of 2018. The Class 2 tables of MTCA and the Budget speeches are not
@@ -32,6 +33,11 @@ TEXTS = {
 	"eli/sl/372.16": "Income Tax (Statutory Dates) Rules, S.L. 372.16",
 	"eli/sl/372.18": "Payment of Provisional Tax (P.T.) Rules, S.L. 372.18",
 	"eli/sl/372.28": "Income Tax (Rate of Interest) Rules, S.L. 372.28",
+	"eli/cap/406": "Value Added Tax Act, Cap. 406",
+	"eli/sl/406.2": "Value Added Tax (Tax Period) Regulations, S.L. 406.02",
+	"eli/sl/406.9": "Value Added Tax (Forms) Regulations, S.L. 406.09",
+	"eli/sl/406.14": "Value Added Tax (Recapitulative Statement) Regulations, S.L. 406.14",
+	"eli/sl/406.19": "Value Added Tax (Rate of Interest) Regulations, S.L. 406.19",
 }
 
 
@@ -75,8 +81,9 @@ def main() -> int:
 			f"PDF {str(before.get('sha256'))[:12]} -> {after['sha256'][:12]}"
 		)
 	print(
-		"\nReview the change against docs/capital-allowances.md, docs/income-tax.md and the two rule registers, then "
-		"record the new versions with `python tools/law_check.py --update`."
+		"\nReview the change against docs/capital-allowances.md, docs/income-tax.md, docs/vat.md, "
+		"docs/vat-articles-11-12.md and the three rule registers, then record the new versions with "
+		"`python tools/law_check.py --update`."
 	)
 	return 1
 

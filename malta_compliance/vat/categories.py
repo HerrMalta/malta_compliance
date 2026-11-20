@@ -1,7 +1,9 @@
 """Tax categories of the Maltese VAT return, named after its boxes: per category the direction, the lines of the
-return it enters (return_form.LINES) and the rows of its Article 10 tax template. An invoice carries one category.
-Imports no Frappe.
+return it enters (return_form.LINES) and the rows of its Article 10 tax template; and the tax categories of the
+registrations under Articles 11 and 12 (ARTICLE_11, ARTICLE_12). An invoice carries one category. Imports no Frappe.
 """
+
+from dataclasses import dataclass
 
 # VAT accounts, by their numbers in setup/chart_self_employed.json.
 ACCOUNTS = {
@@ -160,3 +162,90 @@ TEMPLATE_RATE = {title: rows[0][1] for title, _direction, _targets, rows in CATE
 NOT_DEDUCTIBLE = frozenset(
 	title for title, _direction, _targets, rows in CATEGORIES if any(key == COST for key, *_ in rows)
 )
+
+
+# Registrations under Articles 11 and 12 (docs/vat-articles-11-12.md). An Article 11 company charges no VAT and
+# deducts none: its invoices carry a category of ARTICLE_11, or NO_RETURN_BOX for a purchase outside the
+# declaration, and no VAT rows. A purchase whose VAT the company self-charges carries a category of ARTICLE_12.
+
+# How a sale counts towards the turnover of the small-enterprise limit (rules.SmallEnterprise.domestic).
+TURNOVER_MALTA = "malta"  # place of supply in Malta: counted in every period
+TURNOVER_OUTSIDE = "outside"  # place of supply outside Malta: counted until 2024
+
+# Kinds of a purchase under Article 12, as in the notice of payment.
+SERVICES = "Services"
+GOODS = "Goods"
+
+# Boxes of the declaration of an Article 11 registration (S.L. 406.09, Fifth Schedule).
+ARTICLE_11_BOXES = (
+	("1", "Sale of Goods"),
+	("2", "Provision of Services"),
+	("3", "Purchases of stock for re-sale"),
+	("4", "Purchases of capital assets during the year"),
+)
+
+
+@dataclass(frozen=True)
+class Article11Category:
+	"""Tax category of an Article 11 company. box: box of the declaration, None for none. turnover: TURNOVER_MALTA
+	or TURNOVER_OUTSIDE for a sale counted towards the small-enterprise limit, None otherwise. eu_customer: a
+	service whose VAT the customer in another Member State pays. eu_goods: goods acquired from another Member
+	State with the VAT of that State, counted towards the acquisitions threshold."""
+
+	title: str
+	direction: str
+	box: str | None
+	turnover: str | None = None
+	eu_customer: bool = False
+	eu_goods: bool = False
+
+
+@dataclass(frozen=True)
+class Article12Category:
+	"""Tax category of a purchase whose VAT is self-charged under Article 12 at `rate` percent, without deduction.
+	kind: SERVICES or GOODS. eu: supplier in another Member State. box: box of the Article 11 declaration."""
+
+	title: str
+	kind: str
+	eu: bool
+	rate: int
+	box: str | None = None
+
+	@property
+	def rows(self) -> tuple:
+		"""Rows of the tax template: the VAT as a cost of the purchase, and the VAT payable."""
+		return not_deductible(self.rate)
+
+
+ARTICLE_11 = (
+	Article11Category("VAT Art 11 Box 1 Sale of goods", SALES, "1", TURNOVER_MALTA),
+	# A disposal of a capital asset is outside the turnover (Sixth Schedule, definition 3(2)).
+	Article11Category("VAT Art 11 Box 1 Sale of capital asset", SALES, "1"),
+	Article11Category("VAT Art 11 Box 2 Services in Malta", SALES, "2", TURNOVER_MALTA),
+	Article11Category(
+		"VAT Art 11 Box 2 Services EU business customer liable", SALES, "2", TURNOVER_OUTSIDE, eu_customer=True
+	),
+	Article11Category("VAT Art 11 Box 2 Services outside Malta", SALES, "2", TURNOVER_OUTSIDE),
+	Article11Category("VAT Art 11 Box 3 Stock for re-sale", PURCHASE, "3"),
+	Article11Category("VAT Art 11 Box 3 Stock for re-sale from EU", PURCHASE, "3", eu_goods=True),
+	Article11Category("VAT Art 11 Box 4 Capital assets", PURCHASE, "4"),
+	Article11Category("VAT Art 11 Box 4 Capital assets from EU", PURCHASE, "4", eu_goods=True),
+	Article11Category("VAT Art 11 EU goods", PURCHASE, None, eu_goods=True),
+)
+
+ARTICLE_12 = (
+	Article12Category("VAT Art 12 EU services 18%", SERVICES, True, 18),
+	Article12Category("VAT Art 12 EU services 5%", SERVICES, True, 5),
+	Article12Category("VAT Art 12 EU services 12%", SERVICES, True, 12),
+	Article12Category("VAT Art 12 Non-EU services 18%", SERVICES, False, 18),
+	Article12Category("VAT Art 12 Non-EU services 5%", SERVICES, False, 5),
+	Article12Category("VAT Art 12 Non-EU services 12%", SERVICES, False, 12),
+	Article12Category("VAT Art 12 EU goods 18%", GOODS, True, 18),
+	Article12Category("VAT Art 12 EU goods 5%", GOODS, True, 5),
+	Article12Category("VAT Art 12 EU goods for re-sale 18%", GOODS, True, 18, "3"),
+	Article12Category("VAT Art 12 EU goods for re-sale 5%", GOODS, True, 5, "3"),
+	Article12Category("VAT Art 12 EU capital goods 18%", GOODS, True, 18, "4"),
+)
+
+ARTICLE_11_BY_TITLE = {category.title: category for category in ARTICLE_11}
+ARTICLE_12_BY_TITLE = {category.title: category for category in ARTICLE_12}

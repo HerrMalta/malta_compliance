@@ -8,3 +8,4 @@ malta_compliance.patches.v0_3.capital_allowances
 malta_compliance.patches.v0_4.taxpayer_records
 malta_compliance.patches.v0_5.vat_return
 malta_compliance.patches.v0_5.vat_categories
+malta_compliance.patches.v0_5.vat_registrations

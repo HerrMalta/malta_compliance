@@ -1,6 +1,6 @@
 """Integration tests of the desk entry on a test site: the Dock record of the app mounted on ERPNext's rail, the
-icons named by that record and by the sidebar "Malta Compliance", and the report VAT Return Malta in that sidebar.
-Read-only; runs after the app is installed.
+icons named by that record and by the sidebar "Malta Compliance", and the VAT reports and the record Malta VAT
+Registration in that sidebar. Read-only; runs after the app is installed.
 
 Run: bench --site <test site> run-tests --module malta_compliance.tests.test_desk
 """
@@ -32,12 +32,13 @@ class TestDesk(unittest.TestCase):
 		app = next(app for app in get_app_data() if app["app_name"] == "malta_compliance")
 		self.assertFalse(app["on_apps_screen"])
 
-	def test_vat_return_in_sidebar(self):
-		self.assertTrue(frappe.db.exists("Report", "VAT Return Malta"))
-		reports = [
-			row.link_to for row in frappe.get_doc("Sidebar", SIDEBAR).items if row.link_type == "Report"
-		]
-		self.assertIn("VAT Return Malta", reports)
+	def test_vat_reports_in_sidebar(self):
+		items = frappe.get_doc("Sidebar", SIDEBAR).items
+		reports = [row.link_to for row in items if row.link_type == "Report"]
+		for report in ("VAT Return Malta", "VAT Declaration Article 11 Malta", "VAT Article 12 Malta"):
+			self.assertTrue(frappe.db.exists("Report", report), report)
+			self.assertIn(report, reports)
+		self.assertIn("Malta VAT Registration", [row.link_to for row in items if row.link_type == "DocType"])
 
 	def test_icons_in_sprite(self):
 		self.assertIn(ICON_HOOK, frappe.get_hooks("app_include_icons", app_name="malta_compliance"))

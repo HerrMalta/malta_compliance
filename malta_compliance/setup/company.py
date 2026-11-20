@@ -1,7 +1,7 @@
 """Sets up an ERPNext company for a self-employed individual in Malta: chart of accounts from
 chart_self_employed.json, bank accounts, company address, fiscal years, default accounts, VAT setup by registration
-article (vat.py), capital allowance categories (capital_allowances.py), a service item and the field for the original
-invoice number on Sales Invoice. Idempotent: an existing company keeps its accounts and receives the accounts of the
+article with the record Malta VAT Registration (vat.py), capital allowance categories (capital_allowances.py), a
+service item and the field for the original invoice number on Sales Invoice. Idempotent: an existing company keeps its accounts and receives the accounts of the
 chart it lacks; missing parts are added. Personal data comes in as arguments only.
 
 Run as Administrator, for example:
@@ -16,7 +16,7 @@ from erpnext.accounts.doctype.account.chart_of_accounts.chart_of_accounts import
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from malta_compliance.setup import capital_allowances, vat
-from malta_compliance.setup.vat import account, setup_vat
+from malta_compliance.setup.vat import account, ensure_registration, setup_vat
 
 CHART_FILE = os.path.join(os.path.dirname(__file__), "chart_self_employed.json")
 # Keys of a chart node that are account properties, not child accounts.
@@ -68,13 +68,23 @@ def setup_company(
 	banks: list | None = None,
 	fiscal_years: list | None = None,
 	default_company: bool = False,
+	vat_registered_from: str | None = None,
+	activity: str | None = None,
+	article_12_number: str | None = None,
+	article_12_from: str | None = None,
 ) -> dict:
 	"""address: Address fields (address_line1, address_line2, city, pincode). banks: dicts with bank, swift_number,
-	account_name, account_number (4 digits in the 1100 group) and iban. fiscal_years: calendar years."""
+	account_name, account_number (4 digits in the 1100 group) and iban. fiscal_years: calendar years. tax_id: the
+	registration number under the article, vat_registered_from its effective date. activity: the category of the
+	Malta VAT Registration. article_12_number or article_12_from: a registration under Article 12 beside one under
+	Article 11."""
 	frappe.only_for("System Manager")
 	vat_article = int(vat_article)
 	if vat_article not in (10, 11):
 		frappe.throw("vat_article must be 10 or 11")
+	article_12 = bool(article_12_number or article_12_from)
+	if article_12 and vat_article != 11:
+		frappe.throw("A registration under Article 12 is set up beside vat_article 11 only")
 
 	# Adding the column commits implicitly in MariaDB, so it runs before the company is created; everything after
 	# it is one transaction.
@@ -90,7 +100,10 @@ def setup_company(
 	set_defaults(company.name, bank_accounts[0] if bank_accounts else None)
 	if address:
 		ensure_address(company.name, address)
-	templates = setup_vat(company.name, vat_article)
+	templates = setup_vat(company.name, vat_article, article_12)
+	registered = ensure_registration(
+		company.name, vat_article, tax_id, vat_registered_from, activity, article_12_number, article_12_from
+	)
 	allowances = capital_allowances.setup_capital_allowances(company.name, create_fields=False)
 	ensure_service_item(company.name)
 	if default_company:
@@ -103,6 +116,7 @@ def setup_company(
 		"accounts": frappe.db.count("Account", {"company": company.name}),
 		"bank_accounts": bank_accounts,
 		"templates_created": templates,
+		"vat_registration_created": registered,
 		"accounts_added": accounts_added,
 		"capital_allowances": allowances,
 	}

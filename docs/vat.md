@@ -1,6 +1,6 @@
 # VAT return of an Article 10 registration in Malta
 
-Legal basis of the tax categories of the report "VAT Return Malta" for a person registered under article 10 of the Value Added Tax Act: the boxes of the return form, the purchases and supplies each sub-line holds, the rate of a reverse charge, and the cases in which self-charged VAT is not deductible. Each statement cites the provision or the official guidance it rests on. Points that no source states are listed in [Readings](#readings) with the reading applied and its grounds.
+Legal basis of the tax categories of the report "VAT Return Malta" for a person registered under article 10 of the Value Added Tax Act: the boxes of the return form, the purchases and supplies each sub-line holds, the rate of a reverse charge, and the cases in which self-charged VAT is not deductible. Each statement cites the provision or the official guidance it rests on. Points that no source states are listed in [Readings](#readings) with the reading applied and its grounds. The registrations under Articles 11 and 12 are described in [vat-articles-11-12.md](vat-articles-11-12.md).
 
 ## Sources
 
