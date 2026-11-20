@@ -11,7 +11,7 @@ The entry "Malta Compliance" on ERPNext's rail, the column of module icons at th
 `malta_compliance.setup.company.setup_company` sets up an ERPNext company for a self-employed individual in Malta:
 
 - a chart of accounts (`setup/chart_self_employed.json`) with revenue split by place of supply, expense categories, VAT accounts, capital allowances, and owner capital and drawings;
-- tax categories named after the boxes of the Maltese VAT return, and for a registration under Article 10 the sales and purchase tax templates of those categories, reverse charge included (`setup/vat.py`); an Article 11 company receives no templates and books purchases gross;
+- the tax categories of the Maltese VAT return (section "VAT categories"), and for a registration under Article 10 their sales and purchase tax templates (`setup/vat.py`); an Article 11 company receives no templates and books purchases gross;
 - bank accounts, company address, fiscal years, default accounts, a service item, and the Sales Invoice field "Original Invoice No" for invoices issued outside ERPNext.
 
 The function is idempotent and takes all personal data as arguments:
@@ -20,23 +20,53 @@ The function is idempotent and takes all personal data as arguments:
 bench --site <site> execute malta_compliance.setup.company.setup_company --kwargs '{"company_name": "...", "abbr": "...", "vat_article": 10, "tax_id": "MT...", "banks": [{"bank": "...", "swift_number": "...", "account_name": "...", "account_number": "1110", "iban": "..."}], "fiscal_years": [2025, 2026]}'
 ```
 
-`malta_compliance.setup.vat.boxes()` returns the VAT return boxes of each tax category.
+`malta_compliance.setup.vat.boxes()` returns the VAT return boxes of each tax category. When a site is migrated to a new version of the app, its patches add the tax categories, templates, chart accounts and asset categories of that version to every company set up by the app.
 
 ### VAT return
 
-The report "VAT Return Malta" computes the VAT return of a registration under Article 10 for a calendar quarter, or for other dates such as the first period of a new registration, from the submitted Sales and Purchase Invoices of the period by their tax categories (`malta_compliance/vat/categories.py`). Opening invoices are left out.
+The report "VAT Return Malta" computes the VAT return of a registration under Article 10 for a calendar quarter, or for other dates such as the first period of a new registration, from the submitted Sales and Purchase Invoices of the period by their tax categories (`malta_compliance/vat/categories.py`). Opening invoices are left out. The legal basis of the boxes, the rates and the deduction of self-charged VAT, with citations and the points no source settles, is in [docs/vat.md](docs/vat.md).
 
-- **Layout**: the lines of the tax accountant's worksheet in four sections (intra-community and non-EU trade, reverse charge, domestic supplies and exports, domestic purchases and imports) with the box numbers of the MTCA return form, the sub-lines by rate, the subtotals and the lines of boxes 17, 26 and 42. A sub-line without a tax category shows 0.00. Print and PDF follow the worksheet (`vat_return_malta.html`).
+- **Layout**: the lines of a tax accountant's worksheet in four sections (intra-community and non-EU trade, reverse charge, domestic supplies and exports, domestic purchases and imports) with the box numbers of the return form (VAT Form 003/2011), the sub-lines by rate and by deduction, the subtotals and the lines of boxes 17, 26 and 42. Every box and sub-line is reached by a tax category. Print and PDF follow the worksheet (`vat_return_malta.html`).
 - **Amounts**: the tax base is the net total in company currency. The VAT of purchases, self-charged (boxes 6 and 7) and deducted (boxes 13 to 15 and 34 to 38), is the rate times the tax base of each line, unrounded until shown (the rate of the invoices' VAT rows, or of the category's tax template for rows holding an amount), so that subtotals and box 17 come from the unrounded values; the VAT of sales (boxes 23 to 24) is the amount of the tax rows as invoiced. The note under the report gives the VAT payable of the invoices as booked on the VAT accounts 1310, 1320, 2210 and 2220; it differs by cents from the computed one. Box 42 is box 26 plus box 40 less boxes 39 and 41; Tax Payable is box 42 less the Excess Credit B/F, and Excess Credit is the negative of Tax Payable when it is below zero. Boxes 40 and 41 and the credit brought forward are filters of the report.
 - **Checks**, in the note under the report: invoices without a VAT category of the return, drafts dated in the period, tax rows not counted as VAT, entries on the VAT accounts not explained by the counted invoices, and the settlement entry of the period. "Show Invoices" lists each invoice under its line.
 - **Settlement**: "Create VAT Settlement" (Accounts Manager) creates a draft Journal Entry dated the last day of the period. It clears the period's movements of 1310, 1320, 2210 and 2220 against 2290 VAT Settlement at the VAT payable as filed in box 42, with a difference of at most 0.10 to the books on the Round Off account of the company; 3230 holds the VAT on private acquisitions and is not cleared. The entry carries the period in the Journal Entry fields "VAT Return From" and "VAT Return To"; the report names it and reports a later change of the period's invoices. A period with drafts, invoices without a category of the return, unexplained entries on the VAT accounts or an existing settlement entry is not settled. Refunds and payments are booked on 2290 from the bank statement. Scripts call `malta_compliance.vat.settlement.create_settlement`.
-- **Not covered**: registrations under Article 11 or Article 12, the recapitulative statement, partial exemption, and settlement entries with adjustments of boxes 40 and 41.
+- **Not covered**: registrations under Article 11 or Article 12, the recapitulative statement, partial deduction (a purchase used partly for the business, partial exemption), the customer's self-charge under a direction of the Commissioner, and settlement entries with adjustments of boxes 40 and 41.
 
 The lines, the totals and the settlement amounts are computed in `malta_compliance/vat/return_form.py`, which imports no Frappe.
 
+### VAT categories
+
+Every invoice carries one tax category; a category enters its boxes with the net total of the invoice, and a sub-line by rate receives the invoice by the rate of its VAT rows. The template of a category (Article 10) is named "<category> - <company abbreviation>". A reverse charge is at the Maltese rate of the goods or services; a reverse-charge category without a rate in its name is at 18%.
+
+| Category | Boxes | Template rows |
+|---|---|---|
+| VAT Box 1 EU business customer liable | 1 | 2210 at 0% |
+| VAT Box 2 Supply outside Malta | 2 | 2210 at 0% |
+| VAT Box 18/23 Malta 18% | 18/23 | 2210 at 18% |
+| VAT Box 18 Malta tax in danger customer liable | 18, no tax (supply under the Commissioner's direction that the customer pays its VAT) | 2210 at 0% |
+| VAT Box 18a/23a Malta 7%, 18b/23b Malta 12%, 19/24 Malta 5% | 18a/23a, 18b/23b, 19/24 | 2210 at the rate |
+| VAT Box 20 Exempt with credit or export, VAT Box 21 Exempt without credit | 20, 21 | 2210 at 0% |
+| VAT Box 3/6 9/13 EU goods for resale reverse charge, and its 5% category | 3/6, 9/13 | 1320 and 2220 at the rate, net zero |
+| VAT Box 3/6 9/13 EU goods for resale exempt 0% | 3, 9 (exempt acquisition, such as food and pharmaceuticals), no tax | none |
+| VAT Box 3/6 9a/13a EU services reverse charge, and its 5% and 12% categories | 3/6, 9a/13a | 1320 and 2220 at the rate |
+| VAT Box 3/6 10/14 EU capital goods reverse charge, and its 5% category | 3/6, 10/14 | 1320 and 2220 at the rate |
+| VAT Box 4/7 11/15 Non-EU services reverse charge, and its 5% and 12% categories | 4/7, 11/15 | 1320 and 2220 at the rate |
+| VAT Box 3/6 EU purchases not deductible 18% and 5% | 3/6 only, payable through box 17 | 5960 Non-recoverable VAT and 2220 |
+| VAT Box 4/7 Non-EU services not deductible | 4/7 only | 5960 and 2220 at 18% |
+| VAT Box 3/6 EU goods for private use not deductible, and its 5% category | 3/6 only | 3230 and 2220 at the rate |
+| VAT Box 4/7 Non-EU services for private use not deductible | 4/7 only | 3230 and 2220 at 18% |
+| VAT Box 27/34 Malta goods for resale 18%, 28/35 5% | 27/34, 28/35 | 1310 at the rate |
+| VAT Box 29 Malta exempt purchases for resale | 29 | none |
+| VAT Box 30/36 Malta capital goods 18% and 5% | 30/36 | 1310 at the rate |
+| VAT Box 31/37, 31a/37a, 31b/37b, 32/38 Malta services and overheads at 18%, 7%, 12%, 5% | 31/37 to 32/38 | 1310 at the rate |
+| VAT No return box | none: purchases without VAT in the return, and Maltese VAT that is not deductible or not claimed (booked gross) | none |
+
+- **VAT not deductible**: self-charged VAT on purchases whose VAT is not input tax (VAT Act, Tenth Schedule, item 3: tobacco, alcohol, works of art, motor vehicles, vessels and aircraft with their upkeep, entertainment and hospitality) or which serve exempt supplies without credit (item 5(2)) is in box 3/6 or 4/7 only. The template books it on 5960 Non-recoverable VAT; for a fixed asset the row is booked on the fixed asset account of the asset, and the Asset's purchase amount is the net amount plus that VAT. Goods acquired for private use, and services of box 4 for private use, hold the VAT on 3230 VAT on Private EU Acquisitions.
+- **Imports** from outside the EU enter boxes 27 to 32 with the import VAT paid at customs, in the categories of those boxes.
+
 ### Capital allowances
 
-ERPNext's asset module computes the Maltese tax depreciation for assets of the categories `CA 01` to `CA 18` (the Schedule to S.L. 123.01), `CA IP` (intellectual property, ITA art. 14(1)(m)) and `CA IB` (industrial buildings and structures); `CA Land` carries no allowance. The legal basis, with citations and the points no source settles, is in [docs/capital-allowances.md](docs/capital-allowances.md). `setup_company` creates the categories, their accounts and one fixed-asset Item per category; the patch of version 0.3.0 adds them to companies set up earlier.
+ERPNext's asset module computes the Maltese tax depreciation for assets of the categories `CA 01` to `CA 18` (the Schedule to S.L. 123.01), `CA IP` (intellectual property, ITA art. 14(1)(m)) and `CA IB` (industrial buildings and structures); `CA Land` carries no allowance. The legal basis, with citations and the points no source settles, is in [docs/capital-allowances.md](docs/capital-allowances.md). `setup_company` creates the categories, their accounts and one fixed-asset Item per category.
 
 - **Schedule**: straight line over the minimum number of years of the category (more years are accepted), a full year in the year of first use (the Available-for-use Date), no allowance in the year of disposal unless the asset leaves on the last day of the fiscal year. Industrial buildings: 2% a year, plus 10% in the first year for a building entered as "New building, not used before" in the required field "Building Condition". Intellectual property: at least 3 years, or the whole cost in the year of first use with "Deduct in One Year"; the instalment of the year of a sale is deducted.
 - **Private use and vehicle cap**: the business use of an asset ("Business Use", per fiscal year in "Business Use per Year") and the EUR 14,000 cap of S.L. 123.07 rule 3 for cars ("Vehicle Outside the Cost Cap" for vehicles outside rule 3(4)) reduce the allowance. For each depreciation entry an adjustment entry moves the private share to 3200 Drawings and the capped excess to 3240 Non-deductible Capital Allowances.
@@ -74,6 +104,7 @@ Tests, on a test site with ERPNext and the setup wizard completed:
 bench --site <test site> run-tests --module malta_compliance.tests.test_capital_allowances
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_rules
 bench --site <test site> run-tests --module malta_compliance.tests.test_tax_year
+bench --site <test site> run-tests --module malta_compliance.tests.test_taxpayer
 bench --site <test site> run-tests --module malta_compliance.tests.test_desk
 bench --site <test site> run-tests --module malta_compliance.tests.test_vat_return
 ```
@@ -82,7 +113,7 @@ bench --site <test site> run-tests --module malta_compliance.tests.test_vat_retu
 
 ### Installation
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
+The app is installed with the [bench](https://github.com/frappe/bench) CLI:
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
@@ -92,14 +123,14 @@ bench install-app malta_compliance
 
 ### Contributing
 
-This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
+The repository uses `pre-commit` for code formatting and linting. [pre-commit](https://pre-commit.com/#installation) is installed and enabled for the repository with:
 
 ```bash
 cd apps/malta_compliance
 pre-commit install
 ```
 
-Pre-commit is configured to use the following tools for checking and formatting your code:
+Pre-commit checks and formats the code with:
 
 - ruff
 - eslint

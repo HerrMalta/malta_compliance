@@ -10,8 +10,17 @@ from datetime import date
 from fractions import Fraction
 
 from malta_compliance.vat import categories, return_form
-from malta_compliance.vat.categories import BASE, CATEGORIES, NO_RETURN_BOX, RATE, TARGETS
-from malta_compliance.vat.return_form import LINE, LINES, SUB, Invoice, compute
+from malta_compliance.vat.categories import (
+	BASE,
+	CATEGORIES,
+	NO_RETURN_BOX,
+	NOT_DEDUCTIBLE,
+	RATE,
+	TARGETS,
+	TEMPLATE_ACCOUNTS,
+	TEMPLATE_RATE,
+)
+from malta_compliance.vat.return_form import LINE, LINES, SUB, SUB_BY_RATE, Invoice, compute
 
 EU_SERVICES = "VAT Box 3/6 9a/13a EU services reverse charge"
 EU_GOODS = "VAT Box 3/6 9/13 EU goods for resale reverse charge"
@@ -24,6 +33,20 @@ EU_CUSTOMER = "VAT Box 1 EU business customer liable"
 OUTSIDE_MALTA = "VAT Box 2 Supply outside Malta"
 MALTA_18 = "VAT Box 18/23 Malta 18%"
 EXEMPT = "VAT Box 20 Exempt with credit or export"
+CAPITAL_5 = "VAT Box 30/36 Malta capital goods 5%"
+EU_CAPITAL_5 = "VAT Box 3/6 10/14 EU capital goods reverse charge 5%"
+EU_GOODS_5 = "VAT Box 3/6 9/13 EU goods for resale reverse charge 5%"
+EU_GOODS_EXEMPT = "VAT Box 3/6 9/13 EU goods for resale exempt 0%"
+EU_SERVICES_5 = "VAT Box 3/6 9a/13a EU services reverse charge 5%"
+EU_SERVICES_12 = "VAT Box 3/6 9a/13a EU services reverse charge 12%"
+NON_EU_5 = "VAT Box 4/7 11/15 Non-EU services reverse charge 5%"
+NON_EU_12 = "VAT Box 4/7 11/15 Non-EU services reverse charge 12%"
+EU_NOT_DEDUCTIBLE_18 = "VAT Box 3/6 EU purchases not deductible 18%"
+EU_NOT_DEDUCTIBLE_5 = "VAT Box 3/6 EU purchases not deductible 5%"
+PRIVATE_5 = "VAT Box 3/6 EU goods for private use not deductible 5%"
+NON_EU_NOT_DEDUCTIBLE = "VAT Box 4/7 Non-EU services not deductible"
+NON_EU_PRIVATE = "VAT Box 4/7 Non-EU services for private use not deductible"
+TAX_IN_DANGER = "VAT Box 18 Malta tax in danger customer liable"
 
 _numbers = iter(range(1, 1000))
 
@@ -87,6 +110,39 @@ class TestLayout(unittest.TestCase):
 					self.assertNotEqual(LINE[line_key].columns, return_form.TAX_ONLY, title)
 				else:
 					self.assertTrue(LINE[line_key].tax_box, title)
+
+	def test_every_line_of_the_return_has_a_category(self):
+		# A box or sub-line is reached directly, or through a RATE target at the rate of the category's template.
+		reached = set()
+		for title, _direction, targets, _rows in CATEGORIES:
+			for line_key, selector, _part in targets:
+				reached.add(line_key)
+				if selector == RATE:
+					reached.add(SUB_BY_RATE.get((line_key, TEMPLATE_RATE.get(title, 0))))
+				elif selector:
+					reached.add(selector)
+		lines = {line.key for line in LINES if line.kind in (return_form.BOX, SUB)}
+		self.assertEqual(lines - reached, set())
+
+	def test_template_rows(self):
+		for title, direction, _targets, rows in CATEGORIES:
+			for key, rate, add_deduct in rows:
+				self.assertIn(key, TEMPLATE_ACCOUNTS, title)
+				self.assertIn(add_deduct, ("Add", "Deduct"), title)
+				self.assertEqual(rate, rows[0][1], title)
+			if direction == categories.SALES:
+				self.assertTrue(all(add_deduct == "Add" for *_, add_deduct in rows), title)
+		self.assertEqual(TEMPLATE_ACCOUNTS[categories.COST], "5960")
+		self.assertEqual(NOT_DEDUCTIBLE, {EU_NOT_DEDUCTIBLE_18, EU_NOT_DEDUCTIBLE_5, NON_EU_NOT_DEDUCTIBLE})
+		rows_of = {title: rows for title, _direction, _targets, rows in CATEGORIES}
+		for title in (PRIVATE, PRIVATE_5, NON_EU_PRIVATE):
+			self.assertEqual(
+				[(k, a) for k, _r, a in rows_of[title]], [("private_vat", "Add"), ("output_reverse", "Deduct")]
+			)
+		for title in NOT_DEDUCTIBLE:
+			self.assertEqual(
+				[(k, a) for k, _r, a in rows_of[title]], [(categories.COST, "Add"), ("output_reverse", "Deduct")]
+			)
 
 	def test_renamed_category(self):
 		self.assertIn("VAT Box 19/24 Malta 5%", TARGETS)
@@ -204,6 +260,90 @@ class TestCompute(unittest.TestCase):
 		self.assertEqual([e[0] for e in r.entries["3_nr18"]], [private])
 		self.assertEqual([e[0] for e in r.entries["9a"]], [services])
 		self.assertNotIn("3", r.entries)
+
+
+class TestCategoriesOfEveryLine(unittest.TestCase):
+	"""The categories of the sub-lines at reduced rates, exempt acquisitions, VAT without deduction and supplies
+	whose VAT the customer pays."""
+
+	def test_capital_goods_at_5_percent(self):
+		r = compute([purchase(CAPITAL_5, 20_000, input_vat=1_000, rates=(5,))])
+		self.assertEqual(r.amounts["30_5"], [20_000, 1_000])
+		self.assertEqual(r.amounts["30_18"], [0, 0])
+		self.assertEqual(r.amounts["33"], [20_000, 1_000])
+		self.assertEqual(r.tax("42"), -1_000)
+		self.assertEqual(r.notes, [])
+
+	def test_reverse_charge_at_5_percent(self):
+		r = compute([reverse_charge(EU_CAPITAL_5, 10_000, 5), reverse_charge(EU_GOODS_5, 4_000, 5)])
+		self.assertEqual(r.amounts["3_ic"], [14_000, 700])
+		self.assertEqual(r.amounts["10_rc5"], [10_000, 500])
+		self.assertEqual(r.amounts["10_rc18"], [0, 0])
+		self.assertEqual(r.amounts["9_rc5"], [4_000, 200])
+		self.assertEqual(r.amounts["12"], [14_000, 700])
+		self.assertEqual(r.amounts["17"], [0, 0])
+		self.assertEqual(r.notes, [])
+
+	def test_exempt_acquisition_has_no_vat(self):
+		r = compute([purchase(EU_GOODS_EXEMPT, 30_000, rates=())])
+		self.assertEqual(r.amounts["3"], [30_000, 0])
+		self.assertEqual(r.amounts["3_ic"], [30_000, 0])
+		self.assertEqual(r.amounts["9"], [30_000, 0])
+		self.assertEqual(r.amounts["9_rc0"], [30_000, 0])
+		self.assertEqual(r.amounts["17"], [0, 0])
+		self.assertEqual(r.tax("42"), 0)
+		self.assertEqual([e[0].category for e in r.entries["9_rc0"]], [EU_GOODS_EXEMPT])
+		self.assertEqual(r.notes, [])
+
+	def test_services_at_reduced_rates(self):
+		r = compute(
+			[
+				reverse_charge(EU_SERVICES_5, 10_000, 5),
+				reverse_charge(EU_SERVICES_12, 10_000, 12),
+				reverse_charge(NON_EU_5, 2_000, 5),
+				reverse_charge(NON_EU_12, 2_000, 12),
+			]
+		)
+		self.assertEqual(r.amounts["3_ic"], [20_000, 1_700])
+		self.assertEqual(r.amounts["9a"], [20_000, 1_700])
+		self.assertEqual(r.amounts["4_malta"], [4_000, 340])
+		self.assertEqual(r.amounts["11"], [4_000, 340])
+		self.assertEqual(r.amounts["17"], [0, 0])
+
+	def test_vat_without_deduction_enters_box_17(self):
+		r = compute(
+			[
+				purchase(EU_NOT_DEDUCTIBLE_18, 10_000, output=1_800, rates=(18,)),
+				purchase(EU_NOT_DEDUCTIBLE_5, 4_000, output=200, rates=(5,)),
+				purchase(PRIVATE_5, 2_000, output=100, rates=(5, 5)),
+				purchase(NON_EU_NOT_DEDUCTIBLE, 5_000, output=900, rates=(18,)),
+				purchase(NON_EU_PRIVATE, 1_000, output=180, rates=(18, 18)),
+			]
+		)
+		self.assertEqual(r.amounts["3_nr18"], [10_000, 1_800])
+		self.assertEqual(r.amounts["3_nr5"], [6_000, 300])
+		self.assertEqual(r.amounts["3_ic"], [0, 0])
+		self.assertEqual(r.amounts["4_nr"], [6_000, 1_080])
+		self.assertEqual(r.amounts["4_malta"], [0, 0])
+		self.assertEqual(r.amounts["12"], [0, 0])
+		self.assertEqual(r.amounts["17"], [22_000, 3_180])
+		self.assertEqual(r.tax("42"), 3_180)
+		self.assertEqual(r.booked, 3_180)
+		self.assertEqual(r.notes, [])
+
+	def test_vat_without_deduction_with_amount_rows(self):
+		# A VAT row holding the amount carries no rate; the template's rate gives the sub-line.
+		r = compute([purchase(EU_NOT_DEDUCTIBLE_5, 4_000, output=200, rates=())])
+		self.assertEqual(r.amounts["3_nr5"], [4_000, 200])
+
+	def test_tax_in_danger_holds_the_value_only(self):
+		r = compute([sale(TAX_IN_DANGER, 50_000), sale(MALTA_18, 10_000, 1_800, 18)])
+		self.assertEqual(r.amounts["18"], [60_000, 1_800])
+		self.assertEqual(r.amounts["18_danger"], [50_000, 0])
+		self.assertEqual(r.amounts["18_taxable"], [10_000, 1_800])
+		self.assertEqual(r.amounts["22"], [60_000, 1_800])
+		self.assertEqual(r.tax("42"), 1_800)
+		self.assertEqual(LINE["18_danger"].columns, return_form.BASE_ONLY)
 
 
 class TestRounding(unittest.TestCase):

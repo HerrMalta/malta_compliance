@@ -13,7 +13,7 @@ from frappe import _
 from frappe.utils import cint, flt, getdate
 
 from malta_compliance.vat import return_form
-from malta_compliance.vat.categories import ACCOUNTS, INPUT_ACCOUNTS, OUTPUT_ACCOUNTS
+from malta_compliance.vat.categories import ACCOUNTS, INPUT_ACCOUNTS, NOT_DEDUCTIBLE, OUTPUT_ACCOUNTS
 from malta_compliance.vat.return_form import money
 
 SETTLEMENT_ACCOUNT = "2290"
@@ -153,20 +153,23 @@ def vat_return(
 
 def read_invoice(doctype: str, doc, rows, key_of: dict[str, str]):
 	"""The invoice for return_form, the entries its VAT rows post (debit minus credit per account) and the rows the
-	return does not count."""
+	return does not count. In a category whose self-charged VAT is not deductible, the Add row on an account other
+	than a VAT account (5960 Non-recoverable VAT, or the fixed asset account of an asset) is that VAT as a cost of
+	the purchase."""
 	sale = doctype == "Sales Invoice"
+	cost_rows = not sale and doc.tax_category in NOT_DEDUCTIBLE
 	output = input_vat = 0
 	rates, posted, ignored = [], defaultdict(int), []
 	for row in rows:
 		amount = cents(row.base_tax_amount_after_discount_amount)
 		key = key_of.get(row.account_head)
+		deduct = not sale and row.add_deduct_tax == "Deduct"
 		if key is None:
-			if amount:
+			if amount and not (cost_rows and not deduct):
 				ignored.append(f"{doc.name}: {row.account_head} {money(amount)}")
 			continue
 		if row.charge_type != "Actual":
 			rates.append(flt(row.rate))
-		deduct = not sale and row.add_deduct_tax == "Deduct"
 		if key in OUTPUT_ACCOUNTS and (sale or deduct):
 			output += amount
 		elif key in INPUT_ACCOUNTS and not sale and not deduct:

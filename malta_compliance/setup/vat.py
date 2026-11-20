@@ -7,7 +7,7 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from malta_compliance.vat import books
-from malta_compliance.vat.categories import ACCOUNTS, BASE, CATEGORIES
+from malta_compliance.vat.categories import BASE, CATEGORIES, COST, TEMPLATE_ACCOUNTS
 from malta_compliance.vat.return_form import LINE
 
 CUSTOM_FIELDS = {
@@ -31,6 +31,14 @@ CUSTOM_FIELDS = {
 			"description": "Last day of the VAT return period settled by this entry",
 		},
 	]
+}
+
+
+# Suffix of the description of a template row by its account key.
+DESCRIPTION = {
+	"input_reverse": " reverse charge",
+	"output_reverse": " reverse charge",
+	COST: " not deductible",
 }
 
 
@@ -71,8 +79,8 @@ def ensure_templates(company: str) -> list[str]:
 		for key, rate, add_deduct in rows:
 			row = {
 				"charge_type": "On Net Total",
-				"account_head": account(company, ACCOUNTS[key]),
-				"description": f"VAT {rate}%" + (" reverse charge" if key.endswith("reverse") else ""),
+				"account_head": account(company, TEMPLATE_ACCOUNTS[key]),
+				"description": f"VAT {rate}%" + DESCRIPTION.get(key, ""),
 				"rate": rate,
 				"cost_center": cost_center,
 			}
